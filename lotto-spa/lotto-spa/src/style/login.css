@@ -48,6 +48,9 @@
     padding-left: 40px;
   }
   
+  a {
+    text-decoration: none; /* Remove underline from links */
+  }
   
   .submit2-btn2 {
     flex-direction: column;
@@ -91,7 +94,7 @@
     font-family: "IBM Plex Mono";
   }
   
-  .signup-links span {
+  .signup-links span, a {
     font-family: "IBM Plex Mono";
     color: #f6e05e;
     cursor: pointer;
