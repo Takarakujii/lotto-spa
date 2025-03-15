@@ -1,35 +1,36 @@
-import { BrowserRouter as Router } from 'react-router-dom'; // Import BrowserRouter
-import { useEffect, useState } from 'react';
-import TakarakujiLoader from './components/loader'; // Import the loader component
-import AppRoutes from './routes/Approutes'; // Import the routing component
-import useSocket from './hooks/useSocket'; // Import the useSocket hook
+import { useEffect, useState } from "react";
+import TakarakujiLoader from "./components/loader"; // Loader component
+import AppRoutes from "./routes/Approutes"; // Routing component
+import useSocket from "./hooks/useSocket"; // WebSocket hook
 
 function App() {
-  const { isConnected } = useSocket(); // Get connection status
-  const [loading, setLoading] = useState(true); // State to manage loading
+  const { isConnected } = useSocket();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadingTimeout = setTimeout(() => {
-      setLoading(false); // Hide loader after delay when connected
-    }, 2000); // Delay for 2 seconds
+    let loadingTimeout;
 
     if (!isConnected) {
-      setLoading(true); // Show loader when not connected
+      setLoading(true);
+    } else {
+      loadingTimeout = setTimeout(() => {
+        setLoading(false);
+      }, 5000);
     }
 
-    return () => clearTimeout(loadingTimeout); // Cleanup timeout on unmount
+    return () => {
+      if (loadingTimeout) clearTimeout(loadingTimeout);
+    };
   }, [isConnected]);
 
   return (
-    <Router>
-      <div className="app-container">
-        {loading ? ( // Conditional rendering of the loader
-          <TakarakujiLoader onComplete={() => console.log('Loading complete!')} />
-        ) : (
-          <AppRoutes /> // Render the routing component after loading
-        )}
-      </div>
-    </Router>
+    <div className="app-container">
+      {loading ? (
+        <TakarakujiLoader onComplete={() => console.log("Loading complete!")} />
+      ) : (
+        <AppRoutes /> // No Router here, it's already in index.js
+      )}
+    </div>
   );
 }
 

@@ -1,48 +1,30 @@
 import React, { useState, useEffect } from 'react';
+import useSocket from '../hooks/useSocket'; // Adjust the path to your useSocket hook
 
 const LandingPage = () => {
+    const { countdown } = useSocket(); // Get the countdown from the useSocket hook
     const [seconds, setSeconds] = useState(0);
     const [minutes, setMinutes] = useState(1);
     const [isHovered, setIsHovered] = useState(false);
-    // const [selectedNumbers, setSelectedNumbers] = useState([]);
-    // const [showModal, setShowModal] = useState(false);
     const [animate, setAnimate] = useState(false);
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            if (seconds > 0) {
-                setSeconds(seconds - 1);
-            } else if (minutes > 0) {
-                setMinutes(minutes - 1);
-                setSeconds(59);
-            } else {
-                setAnimate(true);
-                setTimeout(() => setAnimate(false), 3000);
-            }
-        }, 1000);
+        // Update the minutes and seconds based on the countdown value
+        const newMinutes = Math.floor(countdown / 60);
+        const newSeconds = countdown % 60;
+        setMinutes(newMinutes);
+        setSeconds(newSeconds);
 
-        return () => clearInterval(timer);
-    }, [seconds, minutes]);
+        // Trigger animation when countdown reaches 0
+        if (countdown === 0) {
+            setAnimate(true);
+            setTimeout(() => setAnimate(false), 3000);
+        }
+    }, [countdown]);
 
     const formatTime = (time) => {
         return time < 10 ? `0${time}` : time;
     };
-
-    // Yung sa draw ticket din to pagclinick
-    // const handleNumberClick = (num) => {
-    //     if (selectedNumbers.includes(num)) {
-    //         setSelectedNumbers(selectedNumbers.filter(n => n !== num));
-    //     } else if (selectedNumbers.length < 6) {
-    //         setSelectedNumbers([...selectedNumbers, num]);
-    //     }
-    // };
-
-    // const handleStartClick = () => {
-    //     setShowModal(true);
-    // };
-
-    // Generate numbers for pick selection
-    // const numberOptions = Array.from({ length: 49 }, (_, i) => i + 1);
 
     return (
         <div className="relative min-h-screen overflow-hidden" style={{
@@ -102,58 +84,27 @@ const LandingPage = () => {
                             PICK YOUR NUMBERS • WIN THE JACKPOT
                         </p>
 
-
-                        {/* Yung sa draw ticket din to (pwede mong burahin) */}
-                        {/* Selected numbers display
-                        <div className="mb-8 w-full max-w-md">
-                            <h2 className="text-white text-xl mb-4 text-center" style={{
-                                color: "#ffcc00",
-                                textShadow: "0 0 5px #ffcc00"
-                            }}>YOUR SELECTION</h2>
-                            <div className="p-4 rounded-lg flex justify-center gap-3" style={{
-                                background: "rgba(0, 0, 0, 0.5)",
-                                boxShadow: "0 0 10px rgba(255, 0, 255, 0.5), inset 0 0 10px rgba(255, 0, 255, 0.2)",
-                                borderRadius: "10px",
-                                border: "1px solid rgba(255, 0, 255, 0.3)"
-                            }}>
-                                {Array.from({ length: 6 }).map((_, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl transition-all duration-300"
-                                        style={{
-                                            background: selectedNumbers[idx] ? "linear-gradient(135deg, #ff00ff, #cc00cc)" : "rgba(0, 0, 0, 0.7)",
-                                            boxShadow: selectedNumbers[idx] ? "0 0 10px #ff00ff" : "none",
-                                            border: "1px solid rgba(255, 255, 255, 0.2)"
-                                        }}
-                                    >
-                                        {selectedNumbers[idx] || ''}
-                                    </div>
-                                ))}
-                            </div>
-                        </div> */}
-
-
-                        {/* start button */}
+                        {/* Start button */}
                         <button
-    className="relative px-16 py-4 text-lg font-bold rounded-md transform transition-all duration-300"
-    style={{
-        background: "rgba(0, 0, 0, 0.7)",
-        color: "#00ffff",
-        border: "2px solid #00ffff",
-        boxShadow: isHovered ? "0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff" : "0 0 5px #00ffff",
-        textShadow: "0 0 5px #00ffff",
-        letterSpacing: "3px",
-        transform: isHovered ? "scale(1.05)" : "scale(1)"
-    }}
-    onMouseEnter={() => setIsHovered(true)}
-    onMouseLeave={() => setIsHovered(false)}
-    onClick={() => {
-        // Navigate to the login page
-        window.location.href = '/signin';
-    }}
->
-    START
-</button>
+                            className="relative px-16 py-4 text-lg font-bold rounded-md transform transition-all duration-300"
+                            style={{
+                                background: "rgba(0, 0, 0, 0.7)",
+                                color: "#00ffff",
+                                border: "2px solid #00ffff",
+                                boxShadow: isHovered ? "0 0 10px #00ffff, 0 0 20px #00ffff, 0 0 30px #00ffff" : "0 0 5px #00ffff",
+                                textShadow: "0 0 5px #00ffff",
+                                letterSpacing: "3px",
+                                transform: isHovered ? "scale(1.05)" : "scale(1)"
+                            }}
+                            onMouseEnter={() => setIsHovered(true)}
+                            onMouseLeave={() => setIsHovered(false)}
+                            onClick={() => {
+                                // Navigate to the login page
+                                window.location.href = '/signin';
+                            }}
+                        >
+                            START
+                        </button>
                     </div>
 
                     {/* Right side - Results */}
@@ -236,108 +187,6 @@ const LandingPage = () => {
                 </div>
             </div>
 
-            {/* yung sa draw ticket to dapat(wag mo pansinin/burahin mo nalang) */}
-            {/* Number Selection Modal with cyberpunk styling
-            {showModal && (
-                <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm flex items-center justify-center z-50">
-                    <div className="p-6 rounded-lg w-full max-w-2xl" style={{
-                        background: "rgba(0, 0, 0, 0.8)",
-                        boxShadow: "0 0 20px rgba(255, 0, 255, 0.7), 0 0 40px rgba(255, 0, 255, 0.4)",
-                        border: "1px solid rgba(255, 0, 255, 0.5)",
-                    }}>
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 style={{
-                                color: "#00ffff",
-                                textShadow: "0 0 5px #00ffff, 0 0 10px #00ffff",
-                                fontSize: "1.75rem",
-                                letterSpacing: "2px"
-                            }}>SELECT YOUR NUMBERS</h2>
-                            <button
-                                className="text-2xl"
-                                style={{
-                                    color: "#ff00ff",
-                                    textShadow: "0 0 5px #ff00ff"
-                                }}
-                                onClick={() => setShowModal(false)}
-                            >
-                                ×
-                            </button>
-                        </div>
-                        <p style={{
-                            color: "#ffcc00",
-                            marginBottom: "1rem"
-                        }}>Select 6 numbers to play</p>
-                        <div className="grid grid-cols-7 gap-2">
-                            {numberOptions.map(num => (
-                                <button
-                                    key={num}
-                                    className="w-12 h-12 rounded-full flex items-center justify-center font-bold text-xl transition-all duration-200"
-                                    style={{
-                                        background: selectedNumbers.includes(num)
-                                            ? "linear-gradient(135deg, #ff00ff, #cc00cc)"
-                                            : "rgba(0, 0, 0, 0.7)",
-                                        border: selectedNumbers.includes(num)
-                                            ? "1px solid rgba(255, 0, 255, 0.7)"
-                                            : "1px solid rgba(255, 255, 255, 0.1)",
-                                        boxShadow: selectedNumbers.includes(num)
-                                            ? "0 0 10px rgba(255, 0, 255, 0.7)"
-                                            : "none",
-                                        color: selectedNumbers.includes(num)
-                                            ? "#ffffff"
-                                            : "#00ffff",
-                                        textShadow: selectedNumbers.includes(num)
-                                            ? "0 0 5px #ffffff"
-                                            : "0 0 5px #00ffff",
-                                    }}
-                                    onClick={() => handleNumberClick(num)}
-                                >
-                                    {num}
-                                </button>
-                            ))}
-                        </div>
-
-                        <div className="mt-6 flex gap-4 justify-end">
-                            <button
-                                className="px-6 py-3 rounded-md transition-all duration-300"
-                                style={{
-                                    background: "rgba(0, 0, 0, 0.7)",
-                                    color: "#ff00ff",
-                                    border: "1px solid #ff00ff",
-                                    boxShadow: "0 0 5px #ff00ff",
-                                    textShadow: "0 0 3px #ff00ff"
-                                }}
-                                onClick={() => setSelectedNumbers([])}
-                            >
-                                CLEAR
-                            </button>
-                            <button
-                                className="px-6 py-3 rounded-md transition-all duration-300"
-                                style={{
-                                    background: selectedNumbers.length === 6
-                                        ? "linear-gradient(135deg, #00ffff, #00cccc)"
-                                        : "rgba(0, 0, 0, 0.7)",
-                                    color: "#ffffff",
-                                    border: "1px solid #00ffff",
-                                    boxShadow: selectedNumbers.length === 6
-                                        ? "0 0 10px #00ffff, 0 0 20px #00ffff"
-                                        : "0 0 5px #00ffff",
-                                    textShadow: "0 0 5px #00ffff",
-                                    opacity: selectedNumbers.length === 6 ? 1 : 0.5,
-                                }}
-                                disabled={selectedNumbers.length !== 6}
-                                onClick={() => {
-                                    if (selectedNumbers.length === 6) {
-                                        setShowModal(false);
-                                    }
-                                }}
-                            >
-                                PLAY NOW
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )} */}
-
             {/* Zero time animation */}
             {animate && (
                 <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
@@ -346,23 +195,23 @@ const LandingPage = () => {
                         textShadow: "0 0 10px #ff00ff, 0 0 20px #ff00ff, 0 0 30px #ff00ff, 0 0 40px #ff00ff",
                         animation: "pulse 0.5s infinite alternate"
                     }}>
-                        DRAW TIME!
+                        TIMES UP!
                     </div>
                 </div>
             )}
 
             {/* CSS for floating animation */}
             <style jsx="true">{`
-                                            @keyframes float {
-                                                0% { transform: translateY(0px) translateX(0px); }
-                                                50% { transform: translateY(-20px) translateX(10px); }
-                                                100% { transform: translateY(0px) translateX(0px); }
-                                            }
-                                            @keyframes pulse {
-                                                0% { opacity: 0.5; transform: scale(0.95); }
-                                                100% { opacity: 1; transform: scale(1.05); }
-                                            }
-                                        `}</style>
+                @keyframes float {
+                    0% { transform: translateY(0px) translateX(0px); }
+                    50% { transform: translateY(-20px) translateX(10px); }
+                    100% { transform: translateY(0px) translateX(0px); }
+                }
+                @keyframes pulse {
+                    0% { opacity: 0.5; transform: scale(0.95); }
+                    100% { opacity: 1; transform: scale(1.05); }
+                }
+            `}</style>
         </div>
     );
 };

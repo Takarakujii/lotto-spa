@@ -1,18 +1,14 @@
 /* eslint no-restricted-globals: ["error", "event"] */
-/* global document */
-
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { BrowserRouter, Routes, Route } from "react-router";
-import './style/index.css'
-import App from './App.jsx'
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from "react-router";
+import './style/index.css'; // Ensure CSS is imported
+import App from './App.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <Routes>
-        <Route path='/' element={<App />} />
-      </Routes>
+      <App /> {/* Render the App component */}
     </BrowserRouter>
   </StrictMode>,
-)
+);

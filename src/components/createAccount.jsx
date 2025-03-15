@@ -36,7 +36,7 @@ const CreateAccount = () => {
         withCredentials: true,
       });
       console.log("Account created successfully:", response.data); // Handle success
-      navigate("/login"); // Redirect to login page
+      navigate("/signin"); // Redirect to login page
     } catch (error) {
       console.error("Error creating account:", error);
       setError("Error creating account. Please try again."); // Set error message
@@ -96,7 +96,7 @@ const CreateAccount = () => {
             <button type="submit" className="submit-btn">Create Account</button>
 
             <p className="login-link">
-              Already Have an Account? <Link to="/login">Log in</Link>
+              Already Have an Account? <Link to="/signin">Log in</Link>
             </p>
           </div>
         </div>
