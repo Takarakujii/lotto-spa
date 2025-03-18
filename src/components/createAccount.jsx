@@ -27,7 +27,7 @@ const CreateAccount = () => {
         username,
         email,
         password,
-        birthdate, // Include birthdate in the request
+        birthdate, 
       }, {
         headers: {
           apikey: 'hotdog',
@@ -35,11 +35,11 @@ const CreateAccount = () => {
         },
         withCredentials: true,
       });
-      console.log("Account created successfully:", response.data); // Handle success
-      navigate("/signin"); // Redirect to login page
+      console.log("Account created successfully:", response.data); 
+      navigate("/signin"); 
     } catch (error) {
       console.error("Error creating account:", error);
-      setError("Error creating account. Please try again."); // Set error message
+      setError("Error creating account. Please try again."); 
     }
   };
 

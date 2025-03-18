@@ -40,13 +40,13 @@ const Login = () => {
 
       const token = response.data.data.token; // Adjust as needed
       if (token) {
-        localStorage.setItem("jwttoken", token); // Store the token in local storage
+        localStorage.setItem("token", token); // Store the token in local storage
         console.log("Logged in successfully, token:", token); // Print the token
       } else {
         setError("Login failed. No token received."); // Set error message if token is not present
       }
       
-      navigate("/dashboard"); // Redirect after login
+      navigate("/home"); // Redirect after login
 
     } catch (error) {
       console.error("Error logging in:", error);

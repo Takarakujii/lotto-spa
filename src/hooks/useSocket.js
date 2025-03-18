@@ -25,7 +25,7 @@ export default function useSocket() {
 
         // ✅ Listen for countdown updates
         newSocket.on("countdown", (newCountdown) => {
-            console.log(`📥 Received countdown update: ${newCountdown}`);
+            //console.log(`📥 Received countdown update: ${newCountdown}`);
             setCountdown(newCountdown);
 
             // Add a 3-second delay before resetting the countdown after it reaches 0

@@ -14,7 +14,7 @@ async function createCustomServer() {
   const server = createServer(app);
   const io = new Server(server, {
     cors: {
-      origin: '*', // ✅ Allow all clients
+      origin: '*', 
     }
   });
 
@@ -48,7 +48,7 @@ async function createCustomServer() {
 
       if (IS_PRODUCTION) {
         template = index;
-        render = import('./dist/server/server-entry.js').then(mod => mod.render);
+        render = await import('./dist/server/server-entry.js').then(mod => mod.render);
       } else {
         template = await vite.transformIndexHtml(url, index);
         render = (await vite.ssrLoadModule('/src/server-entry.jsx')).render;
@@ -65,19 +65,19 @@ async function createCustomServer() {
     }
   });
 
-  // ✅ Countdown logic
-  let countdown = 60; // Start at 60 seconds
+  
+  let countdown = 60; 
 
   const startCountdown = () => {
     setInterval(() => {
       countdown--;
 
       if (countdown < 0) {
-        countdown = 60; // Reset countdown
+        countdown = 60; 
       }
 
-      console.log(`⏳ Sending countdown update: ${countdown}`);
-      io.emit('countdown', countdown); // ✅ Broadcast countdown
+      
+      io.emit('countdown', countdown); 
     }, 1000);
   };
 

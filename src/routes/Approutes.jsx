@@ -3,6 +3,9 @@ import SignIn from '../components/login'; // Updated to use login.jsx
 import SignUp from '../components/createAccount'; // Ensure this path is correct
 import NotFound from '../pages/NotFound';
 import Landing from '../components/LandingPage';
+import DrawPage from '../pages/DrawPage';
+import AccountProfilePage from '../pages/AccountProfile';
+import File from '../pages/file';
 
 const AppRoutes = () => {
   return (
@@ -11,6 +14,9 @@ const AppRoutes = () => {
       <Route path="/signup" element={<SignUp />} />
       <Route path="*" element={<NotFound />} />
       <Route path="/" element={<Landing />} />
+      <Route path="/home" element={<DrawPage />} />
+      <Route path="/profile" element={<AccountProfilePage/>} />
+      <Route path="/file" element={<File />} />
     </Routes>
   );
 };

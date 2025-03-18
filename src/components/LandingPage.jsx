@@ -9,13 +9,12 @@ const LandingPage = () => {
     const [animate, setAnimate] = useState(false);
 
     useEffect(() => {
-        // Update the minutes and seconds based on the countdown value
         const newMinutes = Math.floor(countdown / 60);
         const newSeconds = countdown % 60;
         setMinutes(newMinutes);
         setSeconds(newSeconds);
 
-        // Trigger animation when countdown reaches 0
+        
         if (countdown === 0) {
             setAnimate(true);
             setTimeout(() => setAnimate(false), 3000);
