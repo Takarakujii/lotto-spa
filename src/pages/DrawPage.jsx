@@ -4,11 +4,11 @@ import useSocket from '../hooks/useSocket'; // Adjust the path to your useSocket
 import { useNavigate } from 'react-router-dom';
 
 const DrawPage = () => {
-    const { countdown } = useSocket(); // Get the countdown from the useSocket hook
+    const { countdown } = useSocket(); 
     const [seconds, setSeconds] = useState(0);
     const [minutes, setMinutes] = useState(1);
     const [animate, setAnimate] = useState(false);
-    const [isResetting, setIsResetting] = useState(false); // Track if the countdown is resetting
+    const [isResetting, setIsResetting] = useState(false); 
 
     useEffect(() => {
         // Update the minutes and seconds based on the countdown value

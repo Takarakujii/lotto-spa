@@ -14,14 +14,14 @@ async function createCustomServer() {
   const server = createServer(app);
   const io = new Server(server, {
     cors: {
-      origin: '*', 
+      origin: '*', // ✅ Allow all clients
     }
   });
 
   let vite;
 
   if (IS_PRODUCTION) {
-    app.use(express.static(path.resolve(__dirname, './dist/client/'), { index: false }));
+    app.use(express.static(path.resolve(__dirname, './dist/client/')));
   } else {
     vite = await createViteServer({
       server: { middlewareMode: true },
@@ -48,7 +48,7 @@ async function createCustomServer() {
 
       if (IS_PRODUCTION) {
         template = index;
-        render = await import('./dist/server/server-entry.js').then(mod => mod.render);
+        render = import('./dist/server/server-entry.js').then(mod => mod.render);
       } else {
         template = await vite.transformIndexHtml(url, index);
         render = (await vite.ssrLoadModule('/src/server-entry.jsx')).render;

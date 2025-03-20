@@ -1,16 +1,14 @@
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
-/**
- * @returns {{ socket: Socket | null, isConnected: boolean, countdown: number }}
- */
+
 export default function useSocket() {
     const [isConnected, setIsConnected] = useState(false);
     const [socket, setSocket] = useState(null);
-    const [countdown, setCountdown] = useState(60); // Default value
+    const [countdown, setCountdown] = useState(60); 
 
     useEffect(() => {
-        const newSocket = io("http://localhost:3000"); // Ensure correct server URL
+        const newSocket = io("http://localhost:3000"); 
         setSocket(newSocket);
 
         newSocket.on("connect", () => {
