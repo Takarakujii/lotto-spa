@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import useSocket from '../hooks/useSocket'; // Adjust the path to your useSocket hook
-
+import useSocket from '../hooks/useSocket'; 
 const LandingPage = () => {
     const { countdown } = useSocket(); // Get the countdown from the useSocket hook
     const [seconds, setSeconds] = useState(0);

@@ -1,7 +1,5 @@
-import axios from 'axios';
-import React, { useState } from 'react';
-
-
+import React, { useState, useEffect } from 'react';
+import useAccountForm from '../hooks/useAccountForm'; // Import the custom 
 
 const AccountProfilePage = () => {
     const [isHovered, setIsHovered] = useState({
@@ -12,7 +10,21 @@ const AccountProfilePage = () => {
     });
 
     const [topUpAmount, setTopUpAmount] = useState(0);
-    const [error, setError] = useState(""); // Initialize the error state
+
+    // Use the custom hook
+    const {
+        balance,
+        username,
+        email,
+        birthdate,
+        error,
+        handleAccountForm,
+    } = useAccountForm();
+
+    // Fetch account data when the component mounts
+    useEffect(() => {
+        handleAccountForm();
+    }, [handleAccountForm]);
 
     const handleHover = (button, isHovering) => {
         setIsHovered(prev => ({ ...prev, [button]: isHovering }));
@@ -33,26 +45,23 @@ const AccountProfilePage = () => {
             setError("Please enter a valid amount.");
             return;
         }
-    
-        const token = localStorage.getItem("token"); 
-    
+
         try {
-            const response = await axios.post("http://localhost:8080/v1/account/topup", {
+            const response = await axios.post("http://localhost:8080/v1/topup", {
                 amount: topUpAmount
             }, {
                 headers: {
                     apikey: "hotdog",
                     "Content-Type": "application/json",
-                    token: token 
-                    
+                    token: localStorage.getItem('token')
                 },
                 withCredentials: true,
             });
-            console.log(response.data);
+
             if (response.data.success) {
-                console.log(response.data)
                 setTopUpAmount(0);
                 setError("");
+                handleAccountForm(); // Refresh the balance after top-up
             } else {
                 setError("Top-up failed. Please try again.");
             }
@@ -60,8 +69,8 @@ const AccountProfilePage = () => {
             console.error("Error during top-up:", error);
             setError("An error occurred. Please try again.");
         }
-    };
-
+7
+};
     return (
         <div className="relative min-h-screen overflow-hidden" style={{
             background: "linear-gradient(180deg, #0a001a 0%, #1f0040 100%)"
@@ -130,26 +139,7 @@ const AccountProfilePage = () => {
                             <input
                                 type="text"
                                 readOnly
-                                value="CyberPlayer42"
-                                className="p-4 rounded-md w-full"
-                                style={{
-                                    background: "rgba(30, 30, 50, 0.7)",
-                                    border: "1px solid rgba(0, 255, 255, 0.5)",
-                                    boxShadow: "0 0 5px rgba(0, 255, 255, 0.5), inset 0 0 5px rgba(0, 255, 255, 0.2)",
-                                    color: "#ffffff",
-                                    textShadow: "0 0 2px #ffffff"
-                                }}
-                            />
-                        </div>
-
-                        <div className="flex flex-col space-y-2">
-                            <label className="text-xl" style={{ color: "#00ffff", textShadow: "0 0 3px #00ffff" }}>
-                                Name:
-                            </label>
-                            <input
-                                type="text"
-                                readOnly
-                                value="John Silverhand"
+                                value={username}
                                 className="p-4 rounded-md w-full"
                                 style={{
                                     background: "rgba(30, 30, 50, 0.7)",
@@ -168,7 +158,7 @@ const AccountProfilePage = () => {
                             <input
                                 type="text"
                                 readOnly
-                                value="2001-04-12"
+                                value={birthdate}
                                 className="p-4 rounded-md w-full"
                                 style={{
                                     background: "rgba(30, 30, 50, 0.7)",
@@ -187,7 +177,7 @@ const AccountProfilePage = () => {
                             <input
                                 type="email"
                                 readOnly
-                                value="cyber@night.city"
+                                value={email}
                                 className="p-4 rounded-md w-full"
                                 style={{
                                     background: "rgba(30, 30, 50, 0.7)",
@@ -225,7 +215,7 @@ const AccountProfilePage = () => {
                                 Account Balance
                             </p>
                             <p className="text-4xl font-bold" style={{ color: "#ffffff", textShadow: "0 0 5px #ffffff" }}>
-                                ₱500.00
+                            ₱{balance.toFixed(2)}
                             </p>
                         </div>
                     </div>

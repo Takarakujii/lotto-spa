@@ -5,7 +5,6 @@ import NotFound from '../pages/NotFound';
 import Landing from '../components/LandingPage';
 import DrawPage from '../pages/DrawPage';
 import AccountProfilePage from '../pages/AccountProfile';
-import File from '../pages/file';
 
 const AppRoutes = () => {
   return (
@@ -16,7 +15,6 @@ const AppRoutes = () => {
       <Route path="/" element={<Landing />} />
       <Route path="/home" element={<DrawPage />} />
       <Route path="/profile" element={<AccountProfilePage/>} />
-      <Route path="/file" element={<File />} />
     </Routes>
   );
 };

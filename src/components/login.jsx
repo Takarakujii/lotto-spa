@@ -8,11 +8,11 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState(""); // Error state
+  const [error, setError] = useState(""); 
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); // Reset errors before submission
+    setError(""); 
 
     if (!username || !password) {
       setError("Username/Email and Password are required.");
@@ -23,7 +23,7 @@ const Login = () => {
       const response = await axios.post(
         "http://localhost:8080/v1/account/login",
         {
-          username: username, // Fixed field name
+          username: username, 
           password,
         },
         {
@@ -35,15 +35,15 @@ const Login = () => {
         }
       );
 
-      console.log("API Response:", response.data); // Debug response
-      console.log("token", response.data.data.token); // Debug token
+      console.log("API Response:", response.data); 
+      console.log("token", response.data.data.token); 
 
-      const token = response.data.data.token; // Adjust as needed
+      const token = response.data.data.token; 
       if (token) {
-        localStorage.setItem("token", token); // Store the token in local storage
-        console.log("Logged in successfully, token:", token); // Print the token
+        localStorage.setItem("token", token); 
+        console.log("Logged in successfully, token:", token); 
       } else {
-        setError("Login failed. No token received."); // Set error message if token is not present
+        setError("Login failed. No token received."); 
       }
       
       navigate("/home"); // Redirect after login
