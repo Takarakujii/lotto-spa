@@ -1,44 +1,45 @@
+/* eslint no-restricted-globals: ["error", "event"] */
+/* global window */
+
 import { useState, useEffect } from 'react';
 import { io } from 'socket.io-client';
 
+/**
+ * @typedef UseSocket
+ * @property {Socket|null} socket,
+ * @property {boolean} isConnected 
+ **/
 
+/**
+ * Use web socket
+ * 
+ * @returns {UseSocket} Web Socket
+ **/
 export default function useSocket() {
-    const [isConnected, setIsConnected] = useState(false);
-    const [socket, setSocket] = useState(null);
-    const [countdown, setCountdown] = useState(60); 
+  const [isConnected, setIsConnected] = useState/** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} **/(false);
+  const [socket, setSocket] = useState/** @type {[Socket|null, React.Dispatch<React.SetStateAction<Socket>>]} **/(null);
 
-    useEffect(() => {
-        const newSocket = io("http://localhost:3000"); 
-        setSocket(newSocket);
+  useEffect(() => {
+    if (window.__IO__) {
+      setSocket(window.__IO__);
+      return;
+    }
 
-        newSocket.on("connect", () => {
-            setIsConnected(true);
-            console.log("✅ WebSocket Connected:", newSocket.id);
-        });
+    window.__IO__ = io();
+    setSocket(window.__IO__);
 
-        newSocket.on("disconnect", () => {
-            setIsConnected(false);
-            console.log("❌ WebSocket Disconnected");
-        });
+    window.addEventListener('beforeunload', () => {
+      window.__IO__?.close();
+      console.log('connection closed')
+    });
+  }, []);
 
-        // ✅ Listen for countdown updates
-        newSocket.on("countdown", (newCountdown) => {
-            //console.log(`📥 Received countdown update: ${newCountdown}`);
-            setCountdown(newCountdown);
+  useEffect(() => {
+    setIsConnected(!!socket);
+  }, [socket]);
 
-            // Add a 3-second delay before resetting the countdown after it reaches 0
-            if (newCountdown === 0) {
-                setTimeout(() => {
-                    setCountdown(60); // Reset countdown to 60 seconds
-                }, 3000); // 3-second delay
-            }
-        });
-
-        return () => {
-            newSocket.off("countdown");
-            newSocket.disconnect();
-        };
-    }, []);
-
-    return { socket, isConnected, countdown };
+  return /** @type {UseSocket} **/{
+    socket,
+    isConnected
+  }
 }

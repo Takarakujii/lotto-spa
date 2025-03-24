@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import useSocket from '../hooks/useSocket'; 
 const LandingPage = () => {
-    const { countdown } = useSocket(); // Get the countdown from the useSocket hook
+    const { countdown } = useSocket();
     const [seconds, setSeconds] = useState(0);
     const [minutes, setMinutes] = useState(1);
     const [isHovered, setIsHovered] = useState(false);

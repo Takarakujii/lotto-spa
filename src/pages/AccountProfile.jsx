@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import useAccountForm from '../hooks/useAccountForm'; // Import the custom 
+import useAccountForm from '../service/useAccountForm';  
+import axios from 'axios';
 
 const AccountProfilePage = () => {
     const [isHovered, setIsHovered] = useState({
@@ -11,7 +12,7 @@ const AccountProfilePage = () => {
 
     const [topUpAmount, setTopUpAmount] = useState(0);
 
-    // Use the custom hook
+   
     const {
         balance,
         username,
@@ -21,7 +22,6 @@ const AccountProfilePage = () => {
         handleAccountForm,
     } = useAccountForm();
 
-    // Fetch account data when the component mounts
     useEffect(() => {
         handleAccountForm();
     }, [handleAccountForm]);
@@ -60,7 +60,6 @@ const AccountProfilePage = () => {
 
             if (response.data.success) {
                 setTopUpAmount(0);
-                setError("");
                 handleAccountForm(); // Refresh the balance after top-up
             } else {
                 setError("Top-up failed. Please try again.");
@@ -69,7 +68,7 @@ const AccountProfilePage = () => {
             console.error("Error during top-up:", error);
             setError("An error occurred. Please try again.");
         }
-7
+
 };
     return (
         <div className="relative min-h-screen overflow-hidden" style={{

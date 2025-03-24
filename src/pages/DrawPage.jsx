@@ -1,210 +1,512 @@
-import React, { useState, useEffect } from 'react';
-import { Menu } from 'lucide-react';
-import useSocket from '../hooks/useSocket'; // Adjust the path to your useSocket hook
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { X } from "lucide-react";
+import { useNavigate } from "react-router";
+import useAccountForm from "../service/useAccountForm";
+import useSocket from '../hooks/useSocket'; 
+import axios from "axios";
 
 const DrawPage = () => {
-    const { countdown } = useSocket(); 
-    const [seconds, setSeconds] = useState(0);
-    const [minutes, setMinutes] = useState(1);
-    const [animate, setAnimate] = useState(false);
-    const [isResetting, setIsResetting] = useState(false); 
+  const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
+  const [activeModalIndex, setActiveModalIndex] = useState(null);
+  const { countdown } = useSocket(); 
+  const [seconds, setSeconds] = useState(0); 
+  const [minutes, setMinutes] = useState(1);
+  const [animate, setAnimate] = useState(false);
+  const [error, setError] = useState(null);
+  const [insufficientFunds, setInsufficientFunds] = useState(false);
+  const [lastDrawNumbers, setLastDrawNumbers] = useState([]); // State for last draw numbers
 
-    useEffect(() => {
-        // Update the minutes and seconds based on the countdown value
-        const newMinutes = Math.floor(countdown / 60);
-        const newSeconds = countdown % 60;
-        setMinutes(newMinutes);
-        setSeconds(newSeconds);
+  const { balance, handleAccountForm } = useAccountForm();
+  const navigate = useNavigate();
 
-        // Trigger animation when countdown reaches 0
-        if (countdown === 0) {
-            setAnimate(true);
-            setIsResetting(true); // Show resetting state
+  
 
-            // Hide the animation and resetting state after 3 seconds
-            setTimeout(() => {
-                setAnimate(false);
-                setIsResetting(false);
-            }, 3000);
+  // Fetch account data when the component mounts
+  useEffect(() => {
+    handleAccountForm();
+  }, [handleAccountForm]);
+
+  // Function to generate a new draw
+  const generateNewDraw = async () => {
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/v1/draw/",
+        {}, 
+        {
+          headers: {
+            apikey: "hotdog", // Add your API key if required
+            "Content-Type": "application/json",
+            token: localStorage.getItem("token"), // Add authentication token if required
+          },
+          withCredentials: true,
         }
-    }, [countdown]);
+      );
 
-    const formatTime = (time) => {
-        return time < 10 ? `0${time}` : time;
-    };
+      if (response.data.success) {
+        console.log("New draw generated:", response.data);
+      } else {
+        setError(response.data.message || "Failed to generate a new draw.");
+      }
+    } catch (error) {
+      console.error("Error generating new draw:", error);
+      setError(
+        error.response?.data?.message ||
+          "An error occurred while generating a new draw."
+      );
+    }
+  };
 
-    const navigate = useNavigate(); // Initialize useNavigate
+  // Countdown logic
+  useEffect(() => {
+    const newMinutes = Math.floor(countdown / 60);
+    const newSeconds = countdown % 60;
+    setMinutes(newMinutes);
+    setSeconds(newSeconds);
 
-    // Function to handle button clicks
-    const handleButtonClick = (text) => {
-        if (text === "Top Up") {
-            navigate('/profile'); // Navigate to the profile page for top-up
-        } else if (text === "History") {
-            // Handle history button click
-            console.log("History button clicked");
-        } else if (text === "Logout") {
-            // Handle logout button click
-            console.log("Logout button clicked");
+    if (countdown === 0) {
+      setAnimate(true);
+      setTimeout(() => setAnimate(false), 3000);
+      generateNewDraw(); 
+    }
+  }, [countdown]);
+
+  // Fetch the last winning number
+  const fetchLastWinningNumber = async () => {
+    try {
+      const response = await axios.get("http://localhost:8080/v1/draw/last", {
+        headers: {
+          apikey: "hotdog", 
+          token: localStorage.getItem("token"), 
+        },
+      });
+
+      if (response.data && response.data.lastDraw && response.data.lastDraw.winning_number) {
+        const lastWinningNumber = response.data.lastDraw.winning_number.split("-").map(Number);
+        setLastDrawNumbers(lastWinningNumber); // Update the last draw numbers
+      } else {
+        console.error("Unexpected API response structure:", response.data);
+      }
+    } catch (err) {
+      console.error("Error fetching last draw:", err);
+    }
+  };
+
+  // Fetch the last winning number when the component mounts
+  useEffect(() => {
+    fetchLastWinningNumber();
+  }, []);
+
+  const formatTime = (time) => {
+    return time < 10 ? `0${time}` : time;
+  };
+
+  const handleButtonClick = (text) => {
+    if (text === "Top Up") {
+      navigate("/profile");
+    } else if (text === "History") {
+      navigate("/history");
+    } else if (text === "Logout") {
+      navigate("/signin");
+    }
+  };
+
+  const handleOpenModal = (index) => {
+    setActiveModalIndex(index);
+    setError(null);
+    setInsufficientFunds(false);
+  };
+
+  const handleCloseModal = () => {
+    setActiveModalIndex(null);
+  };
+
+  const handleSelectNumber = (number) => {
+    if (selectedNumbers.includes(number)) {
+      setError("This number is already selected. Please choose a different number.");
+      return;
+    }
+
+    const newSelectedNumbers = [...selectedNumbers];
+    newSelectedNumbers[activeModalIndex] = number;
+    setSelectedNumbers(newSelectedNumbers);
+    setActiveModalIndex(null);
+    setError(null);
+  };
+
+  const handleReset = () => {
+    setSelectedNumbers(Array(6).fill(null));
+    setError(null);
+    setInsufficientFunds(false);
+  };
+
+  const numberOptions = Array.from({ length: 45 }, (_, i) => i + 1);
+
+  const handleBet = async () => {
+    setError(null);
+    setInsufficientFunds(false);
+
+    if (selectedNumbers.includes(null)) {
+      setError("Please select all 6 numbers before placing a bet.");
+      return;
+    }
+
+    if (balance < 50) {
+      setError("Insufficient funds to place bet. Please top up your account.");
+      setInsufficientFunds(true);
+      return;
+    }
+
+    const formattedBetNumber = selectedNumbers
+      .map((num) => String(num).padStart(2, "0"))
+      .join("-");
+
+    try {
+      const response = await axios.post(
+        "http://localhost:8080/v1/bet",
+        {
+          betAmount: "50",
+          betNumber: formattedBetNumber,
+        },
+        {
+          headers: {
+            apikey: "hotdog",
+            "Content-Type": "application/json",
+            token: localStorage.getItem("token"),
+          },
+          withCredentials: true,
         }
-    };
+      );
 
+      if (response.data.success) {
+        console.log(response.data);
+        handleAccountForm();
+      } else {
+        setError(response.data.message || "Bet failed. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error during bet", error);
+      setError(
+        error.response?.data?.message ||
+          "An error occurred while placing your bet."
+      );
 
-    return (
-        <div className="min-h-screen bg-gray-900 bg-opacity-95 relative overflow-hidden" style={{
-            backgroundImage: "linear-gradient(45deg, rgba(9,9,45,1) 0%, rgba(15,15,40,1) 100%)",
-            backgroundSize: "cover"
-        }}>
-            {/* Glowing orbs background effect */}
-            <div className="absolute w-40 h-40 rounded-full bg-blue-500 blur-3xl opacity-20 top-20 left-20"></div>
-            <div className="absolute w-48 h-48 rounded-full bg-purple-600 blur-3xl opacity-20 bottom-40 right-20"></div>
-            <div className="absolute w-36 h-36 rounded-full bg-blue-400 blur-3xl opacity-10 bottom-20 left-40"></div>
-            <div className="absolute w-44 h-44 rounded-full bg-fuchsia-600 blur-3xl opacity-15 top-40 right-40"></div>
+      if (error.response?.data?.message?.includes("insufficient")) {
+        setInsufficientFunds(true);
+      }
+    }
+  };
 
-            {/* Header */}
-            <header className="flex justify-between items-center mb-12">
-                <h1 className="text-5xl font-bold tracking-wider" style={{
-                    color: "#ff1493",
-                    textShadow: "0 0 10px rgba(255, 20, 147, 0.7), 0 0 20px rgba(255, 20, 147, 0.5)"
-                }}>
-                    TAKARAKUJI
-                </h1>
-                <button className="p-2 rounded-md text-white">
-                    <Menu size={50} className="text-cyan-400" />
-                </button>
-            </header>
+  const isNumberSelected = (number) => {
+    return selectedNumbers.includes(number);
+  };
 
-            {/* Grid overlay */}
-            <div className="absolute inset-0"
+  return (
+    <div
+      className="min-h-screen bg-gray-900 bg-opacity-95 relative overflow-hidden"
+      style={{
+        backgroundImage:
+          "linear-gradient(45deg, rgba(9,9,45,1) 0%, rgba(15,15,40,1) 100%)",
+        backgroundSize: "cover",
+      }}
+    >
+      {/* Glowing orbs background effect */}
+      <div className="absolute w-40 h-40 rounded-full bg-blue-500 blur-3xl opacity-20 top-20 left-20"></div>
+      <div className="absolute w-48 h-48 rounded-full bg-purple-600 blur-3xl opacity-20 bottom-40 right-20"></div>
+      <div className="absolute w-36 h-36 rounded-full bg-blue-400 blur-3xl opacity-10 bottom-20 left-40"></div>
+      <div className="absolute w-44 h-44 rounded-full bg-fuchsia-600 blur-3xl opacity-15 top-40 right-40"></div>
+
+      <div className="container mx-auto px-4 py-6 relative z-10">
+        {/* Grid overlay */}
+        <div
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "linear-gradient(rgba(75, 75, 155, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(75, 75, 155, 0.05) 1px, transparent 1px)",
+            backgroundSize: "40px 40px",
+          }}
+        ></div>
+
+        {/* Main content */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="space-y-8">
+            {/* Draw Ticket Section */}
+            <div>
+              <h2 className="text-yellow-400 text-3xl mb-4 font-light">
+                DRAW TICKET
+              </h2>
+              <div className="p-4 rounded-lg border-2 border-gray-700 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
+                {selectedNumbers.map((number, index) => (
+                  <div
+                    key={index}
+                    className={`w-12 h-12 rounded-md flex items-center justify-center cursor-pointer transition-all hover:shadow-lg ${
+                      number === null
+                        ? "bg-gray-300"
+                        : insufficientFunds
+                        ? "bg-red-300 text-gray-900 font-bold hover:shadow-red-500/50"
+                        : "bg-green-300 text-gray-900 font-bold hover:shadow-green-500/50"
+                    }`}
+                    onClick={() => handleOpenModal(index)}
+                  >
+                    {number !== null && number}
+                  </div>
+                ))}
+              </div>
+
+              {/* Error message display */}
+              {error && (
+                <div
+                  className={`mt-3 p-2 rounded-md text-center ${
+                    insufficientFunds
+                      ? "bg-red-900 bg-opacity-30 text-red-300"
+                      : "bg-yellow-900 bg-opacity-30 text-yellow-300"
+                  }`}
+                >
+                  {error}
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex space-x-10 justify-center">
+              <button
+                className="px-20 py-4 border-2 border-fuchsia-500 rounded-md text-fuchsia-400 font-bold tracking-widest text-xl hover:bg-cyan-900 hover:bg-opacity-30 transition-all transform hover:scale-105"
                 style={{
-                    backgroundImage: "linear-gradient(rgba(75, 75, 155, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(75, 75, 155, 0.05) 1px, transparent 1px)",
-                    backgroundSize: "40px 40px"
-                }}>
+                  textShadow: "0 0 10px #ff00ff, 0 0 10px #ff00ff",
+                  boxShadow: "0 0 10px rgba(255, 0, 255, 0.5)",
+                }}
+                onClick={handleReset}
+              >
+                Reset
+              </button>
+              <button
+                className={`px-20 py-4 border-2 rounded-md font-bold tracking-widest text-xl hover:bg-opacity-30 transition-all transform hover:scale-105 ${
+                  insufficientFunds
+                    ? "border-red-500 text-red-400 hover:bg-red-900"
+                    : "border-cyan-500 text-cyan-400 hover:bg-cyan-900"
+                }`}
+                style={{
+                  textShadow: insufficientFunds
+                    ? "0 0 10px rgba(248, 113, 113, 0.5)"
+                    : "0 0 10px rgba(34, 211, 238, 0.5)",
+                  boxShadow: insufficientFunds
+                    ? "0 0 15px rgba(248, 113, 113, 0.3)"
+                    : "0 0 15px rgba(34, 211, 238, 0.3)",
+                }}
+                onClick={handleBet}
+              >
+                Place Bet
+              </button>
             </div>
 
-            <div className="container mx-auto px-4 py-6 relative z-10">
-                {/* Main content */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <div className="space-y-8">
-                        {/* Draw Ticket Section */}
-                        <div>
-                            <h2 className="text-white text-3xl mb-4 font-light">Draw Ticket</h2>
-                            <div className="p-4 rounded-lg border-2 border-gray-700 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
-                                {[1, 2, 3, 4, 5, 6].map((_, index) => (
-                                    <div key={index} className="w-12 h-12 rounded-md bg-gray-300 flex items-center justify-center cursor-pointer transition-all hover:bg-cyan-200 hover:shadow-lg hover:shadow-cyan-500/50">
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+            {/* Account Info - Redesigned */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Account Balance - Restyled */}
+              <div
+                className={`p-4 rounded-lg border-2 bg-gray-800 bg-opacity-30 backdrop-blur-sm h-64 ${
+                  insufficientFunds ? "border-red-700" : "border-cyan-700"
+                }`}
+                style={{
+                  boxShadow: insufficientFunds
+                    ? "0 0 15px rgba(178, 8, 8, 0.2) inset"
+                    : "0 0 15px rgba(8, 145, 178, 0.2) inset",
+                }}
+              >
+                <div className="p-4 rounded-lg bg-black bg-opacity-50 mb-3 border border-cyan-800 h-full flex flex-col justify-between">
+                  <div>
+                    <p
+                      className={`mb-1 font-mono uppercase tracking-wider text-sm ${
+                        insufficientFunds ? "text-red-400" : "text-cyan-400"
+                      }`}
+                    >
+                      Account Balance
+                    </p>
+                    <p
+                      className={`text-3xl font-bold ${
+                        insufficientFunds ? "text-red-300" : "text-white"
+                      }`}
+                      style={{
+                        textShadow: "0 0 5px rgba(255, 255, 255, 0.5)",
+                      }}
+                    >
+                      ₱{balance.toFixed(2)}
+                    </p>
 
-                        {/* Action Buttons */}
-                        <div className="flex space-x-10 justify-center">
-                            <button className="px-20 py-4 border-2 border-fuchsia-500 rounded-md text-fuchsia-400 font-bold tracking-widest text-xl hover:bg-cyan-900 hover:bg-opacity-30 transition-all transform hover:scale-105" style={{
-                                textShadow: "0 0 10px #ff00ff, 0 0 10px #ff00ff",
-                                boxShadow: "0 0 10px rgba(255, 0, 255, 0.5)",
-                            }}>
-                                Reset
-                            </button>
-                            <button className="px-20 py-4 border-2 border-cyan-500 rounded-md text-cyan-400 font-bold tracking-widest text-xl hover:bg-cyan-900 hover:bg-opacity-30 transition-all transform hover:scale-105" style={{
-                                textShadow: "0 0 10px rgba(34, 211, 238, 0.5)",
-                                boxShadow: "0 0 15px rgba(34, 211, 238, 0.3)"
-                            }}>
-                                Place Bet
-                            </button>
-                        </div>
-
-                        {/* Account Info */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="p-4 rounded-lg border-2 border-gray-700 bg-gray-800 bg-opacity-30 backdrop-blur-sm">
-                                <div className="p-3 rounded bg-gray-700 bg-opacity-50 mb-3">
-                                    <p className="text-gray-300 mb-1">Account Balance</p>
-                                    <p className="text-white text-2xl font-bold">₱500.00</p>
-                                </div>
-                            </div>
-
-                            {/* Buttons */}
-                            <div className="p-4 rounded-lg border-2 border-gray-700 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex flex-col justify-between space-y-3">
-                                {["History", "Logout", "Top Up"].map((text, index) => (
-                                    <button
-                                        key={index}
-                                        className="py-3 px-4 bg-gray-200 rounded-md text-gray-800 font-mono tracking-wide hover:bg-gray-100 transition-all transform hover:scale-105"
-                                        onClick={() => handleButtonClick(text)}                                  
-                                    >
-                                        {text}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="space-y-8">
-                        {/* Last Draw */}
-                        <div>
-                            <h2 className="text-yellow-400 text-3xl mb-4 font-light" style={{
-                                textShadow: "0 0 10px rgba(250, 204, 21, 0.5)"
-                            }}>LAST DRAW</h2>
-                            <div className="p-4 rounded-lg border-2 border-cyan-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
-                                {[12, 9, 43, 19, 22, 6].map((num, index) => (
-                                    <div key={index}
-                                        className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-cyan-400 font-bold border border-cyan-800"
-                                        style={{
-                                            boxShadow: "0 0 10px rgba(34, 211, 238, 0.3)"
-                                        }}
-                                    >
-                                        {num}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Draw Countdown */}
-                        <div>
-                            <h2 className="text-yellow-400 text-3xl mb-4 font-light" style={{
-                                textShadow: "0 0 10px rgba(250, 204, 21, 0.5)"
-                            }}>DRAW COUNTDOWN</h2>
-                            <div className="p-8 rounded-lg border-2 border-fuchsia-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm">
-                                <div className="flex justify-center space-x-4">
-                                    <div className="w-32 h-32">
-                                        <div className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-6xl font-bold" style={{
-                                            color: "#ff1493",
-                                            textShadow: "0 0 10px rgba(255, 20, 147, 0.7)"
-                                        }}>
-                                            {formatTime(minutes)}
-                                        </div>
-                                        <p className="text-center text-gray-400 mt-2">MINUTES</p>
-                                    </div>
-
-                                    <div className="w-32 h-32">
-                                        <div className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-6xl font-bold" style={{
-                                            color: "#ff1493",
-                                            textShadow: "0 0 10px rgba(255, 20, 147, 0.7)"
-                                        }}>
-                                            {formatTime(seconds)}
-                                        </div>
-                                        <p className="text-center text-gray-400 mt-2">SECONDS</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                    {insufficientFunds && (
+                      <p className="text-red-400 text-sm mt-2">
+                        Insufficient balance for ₱50 bet
+                      </p>
+                    )}
+                  </div>
+                  <div className="pt-3 border-t border-cyan-900">
+                    <p className="text-cyan-200 text-xs font-mono">
+                      Last transaction:{" "}
+                      <span className="text-yellow-400">-₱50.00</span>
+                    </p>
+                  </div>
                 </div>
+              </div>
+
+              {/* Action Buttons - Restyled */}
+              <div
+                className="p-4 rounded-lg border-2 border-fuchsia-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex flex-col justify-between h-64"
+                style={{
+                  boxShadow: "0 0 15px rgba(112, 26, 117, 0.2) inset",
+                }}
+              >
+                {["History", "Logout", "Top Up"].map((text, index) => (
+                  <button
+                    key={index}
+                    className={`py-3 px-4 bg-transparent border rounded-md font-mono tracking-wide hover:bg-opacity-20 transition-all transform hover:scale-105 flex justify-between items-center ${
+                      text === "History"
+                        ? "border-yellow-500 text-yellow-400"
+                        : text === "Logout"
+                        ? "border-red-500 text-red-400"
+                        : insufficientFunds
+                        ? "border-green-500 text-green-400 animate-pulse"
+                        : "border-green-500 text-green-400"
+                    }`}
+                    style={{
+                      textShadow: `0 0 5px ${
+                        text === "History"
+                          ? "rgba(250, 204, 21, 0.5)"
+                          : text === "Logout"
+                          ? "rgba(248, 113, 113, 0.5)"
+                          : "rgba(74, 222, 128, 0.5)"
+                      }`,
+                    }}
+                    onClick={() => handleButtonClick(text)}
+                  >
+                    <span>{text}</span>
+                    <span>→</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Right column */}
+          <div className="space-y-8">
+            {/* Last Draw */}
+            <div>
+              <h2
+                className="text-yellow-400 text-3xl mb-4 font-light"
+                style={{
+                  textShadow: "0 0 10px rgba(250, 204, 21, 0.5)",
+                }}
+              >
+                LAST DRAW
+              </h2>
+              <div className="p-4 rounded-lg border-2 border-cyan-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
+                {lastDrawNumbers.map((num, index) => (
+                  <div
+                    key={index}
+                    className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-cyan-400 font-bold border border-cyan-800"
+                    style={{
+                      boxShadow: "0 0 10px rgba(34, 211, 238, 0.3)",
+                    }}
+                  >
+                    {num}
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Zero time animation */}
-            {animate && (
-                <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
-                    <div className="text-8xl font-bold animate-pulse" style={{
+            {/* Draw Countdown */}
+            <div>
+              <h2
+                className="text-yellow-400 text-3xl mb-4 font-light pt-11"
+                style={{
+                  textShadow: "0 0 10px rgba(250, 204, 21, 0.5)",
+                }}
+              >
+                DRAW COUNTDOWN
+              </h2>
+              <div
+                className="p-4 rounded-lg border-2 border-fuchsia-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm h-64 flex items-center justify-center"
+                style={{
+                  boxShadow: "0 0 15px rgba(112, 26, 117, 0.2) inset",
+                }}
+              >
+                <div className="flex justify-center space-x-4">
+                  <div className="w-32 h-32">
+                    <div
+                      className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-6xl font-bold"
+                      style={{
                         color: "#ff1493",
-                        textShadow: "0 0 10px rgba(255, 20, 147, 0.7), 0 0 20px rgba(255, 20, 147, 0.5)"
-                    }}>
-                        DRAW TIME!
+                        textShadow: "0 0 10px rgba(255, 20, 147, 0.7)",
+                      }}
+                    >
+                      {formatTime(minutes)}
                     </div>
+                    <p className="text-center text-gray-400 mt-2">MINUTES</p>
+                  </div>
+
+                  <div className="w-32 h-32">
+                    <div
+                      className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-6xl font-bold"
+                      style={{
+                        color: "#ff1493",
+                        textShadow: "0 0 10px rgba(255, 20, 147, 0.7)",
+                      }}
+                    >
+                      {formatTime(seconds)}
+                    </div>
+                    <p className="text-center text-gray-400 mt-2">SECONDS</p>
+                  </div>
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Number Selection Modal */}
+      {activeModalIndex !== null && (
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+          <div
+            className="bg-gray-900 border-2 border-cyan-500 rounded-lg p-6 w-full max-w-lg relative"
+            style={{
+              boxShadow: "0 0 30px rgba(34, 211, 238, 0.4)",
+            }}
+          >
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-cyan-400 text-xl font-bold">Select Number</h3>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            {/* Show error message in modal if a number is already selected */}
+            {error && (
+              <div className="mb-4 p-2 bg-red-900 bg-opacity-30 text-red-300 rounded-md text-center">
+                {error}
+              </div>
             )}
 
-           
+            <div className="grid grid-cols-5 gap-3">
+              {numberOptions.map((num) => (
+                <button
+                  key={num}
+                  className={`w-12 h-12 rounded-md flex items-center justify-center text-white font-bold transition-all transform hover:scale-110 ${
+                    isNumberSelected(num)
+                      ? "bg-green-600 cursor-not-allowed"
+                      : "bg-gray-800 hover:bg-cyan-700"
+                  }`}
+                  onClick={() => handleSelectNumber(num)}
+                  disabled={isNumberSelected(num)}
+                >
+                  {num}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-    );
+      )}
+    </div>
+  );
 };
 
 export default DrawPage;

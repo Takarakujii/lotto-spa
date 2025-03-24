@@ -5,7 +5,7 @@ import NotFound from '../pages/NotFound';
 import Landing from '../components/LandingPage';
 import DrawPage from '../pages/DrawPage';
 import AccountProfilePage from '../pages/AccountProfile';
-import TRY from '../pages/try';
+import History from '../pages/DrawHistoryPage';
 
 const AppRoutes = () => {
   return (
@@ -16,7 +16,7 @@ const AppRoutes = () => {
       <Route path="/" element={<Landing />} />
       <Route path="/home" element={<DrawPage />} />
       <Route path="/profile" element={<AccountProfilePage/>} />
-      <Route path="/try" element={<TRY/>} />
+      <Route path="/history" element={<History/>} />
     </Routes>
   );
 };

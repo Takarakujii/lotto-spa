@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import TakarakujiLoader from "./components/loader"; // Loader component
-import AppRoutes from "./routes/Approutes"; // Routing component
-import useSocket from "./hooks/useSocket"; // WebSocket hook
+import TakarakujiLoader from "./components/loader"
+import AppRoutes from "./routes/Approutes"; 
+import useSocket from "./hooks/useSocket"; 
 
 function App() {
   const { isConnected } = useSocket();
@@ -11,15 +11,15 @@ function App() {
     let loadingTimeout;
 
     if (!isConnected) {
-      setLoading(true);
+      setLoading(false);
     } else {
       loadingTimeout = setTimeout(() => {
         setLoading(false);
-      }, 5000);
+      }, 2000);
     }
 
     return () => {
-      if (loadingTimeout) clearTimeout(loadingTimeout);
+     
     };
   }, [isConnected]);
 
