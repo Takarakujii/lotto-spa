@@ -1,34 +1,52 @@
 import { useEffect, useState } from "react";
-import TakarakujiLoader from "./components/loader"
+import TakarakujiLoader from "./pages/loader";
 import AppRoutes from "./routes/Approutes"; 
 import useSocket from "./hooks/useSocket"; 
 
 function App() {
   const { isConnected } = useSocket();
   const [loading, setLoading] = useState(true);
+  const [hasShownIntro, setHasShownIntro] = useState(false);
 
   useEffect(() => {
-    let loadingTimeout;
-
-    if (!isConnected) {
+    const introShown = sessionStorage.getItem('takarakujiIntroShown');
+    
+    if (introShown === 'true') {
+      setHasShownIntro(true);
       setLoading(false);
-    } else {
-      loadingTimeout = setTimeout(() => {
-        setLoading(false);
-      }, 2000);
+      return;
     }
 
-    return () => {
-     
-    };
+    if (isConnected && !hasShownIntro) {
+      const loadingTimeout = setTimeout(() => {
+        setLoading(false);
+        setHasShownIntro(true);
+        sessionStorage.setItem('takarakujiIntroShown', 'true');
+      }, 5000); // 5 second intro
+
+      return () => clearTimeout(loadingTimeout);
+    }
+  }, [isConnected, hasShownIntro]);
+
+
+  useEffect(() => {
+    if (!isConnected) {
+      setLoading(true);
+    }
   }, [isConnected]);
 
   return (
     <div className="app-container">
-      {loading ? (
-        <TakarakujiLoader onComplete={() => console.log("Loading complete!")} />
+      {loading && !hasShownIntro ? (
+        <TakarakujiLoader 
+          onComplete={() => {
+            setLoading(false);
+            setHasShownIntro(true);
+            sessionStorage.setItem('takarakujiIntroShown', 'true');
+          }} 
+        />
       ) : (
-        <AppRoutes /> // No Router here, it's already in index.js
+        <AppRoutes />
       )}
     </div>
   );

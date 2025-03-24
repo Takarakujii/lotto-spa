@@ -1,8 +1,8 @@
-import { Routes, Route } from 'react-router'; // Correct import
-import SignIn from '../components/login'; // Updated to use login.jsx
-import SignUp from '../components/createAccount'; // Ensure this path is correct
+import { Routes, Route } from 'react-router';
+import SignIn from '../pages/login'; 
+import SignUp from '../pages/createAccount'; 
 import NotFound from '../pages/NotFound';
-import Landing from '../components/LandingPage';
+import Landing from '../pages/LandingPage';
 import DrawPage from '../pages/DrawPage';
 import AccountProfilePage from '../pages/AccountProfile';
 import History from '../pages/DrawHistoryPage';
