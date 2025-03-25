@@ -1,25 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import useSocket from '../hooks/useSocket'; 
+import { useCountdown } from '../service/CountdownContext';
+
+
 const LandingPage = () => {
-    const { countdown } = useSocket();
-    const [seconds, setSeconds] = useState(0);
-    const [minutes, setMinutes] = useState(1);
+    const countdown = useCountdown()
     const [isHovered, setIsHovered] = useState(false);
     const [animate, setAnimate] = useState(false);
 
-    useEffect(() => {
-        const newMinutes = Math.floor(countdown / 60);
-        const newSeconds = countdown % 60;
-        setMinutes(newMinutes);
-        setSeconds(newSeconds);
 
-        
+    const minutes = Math.floor(countdown / 60);
+    const seconds = countdown % 60;
+
+    useEffect(() => {
         if (countdown === 0) {
             setAnimate(true);
-            setTimeout(() => setAnimate(false), 3000);
+    
+            const timer = setTimeout(() => {
+                setAnimate(false);
+            }, 3000); // Ensure it disappears after 3 seconds
+    
+            return () => clearTimeout(timer);
+        } else {
+            setAnimate(false); // Reset animation when countdown is not zero
         }
     }, [countdown]);
+    
 
+ 
     const formatTime = (time) => {
         return time < 10 ? `0${time}` : time;
     };
@@ -97,7 +104,6 @@ const LandingPage = () => {
                             onMouseEnter={() => setIsHovered(true)}
                             onMouseLeave={() => setIsHovered(false)}
                             onClick={() => {
-                                // Navigate to the login page
                                 window.location.href = '/signin';
                             }}
                         >

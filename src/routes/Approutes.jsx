@@ -6,6 +6,7 @@ import Landing from '../pages/LandingPage';
 import DrawPage from '../pages/DrawPage';
 import AccountProfilePage from '../pages/AccountProfile';
 import History from '../pages/DrawHistoryPage';
+import Notification from '../components/DisplayWinningNotification';
 
 const AppRoutes = () => {
   return (
@@ -17,6 +18,7 @@ const AppRoutes = () => {
       <Route path="/home" element={<DrawPage />} />
       <Route path="/profile" element={<AccountProfilePage/>} />
       <Route path="/history" element={<History/>} />
+      <Route path="/notification" element={<Notification />} />
     </Routes>
   );
 };
