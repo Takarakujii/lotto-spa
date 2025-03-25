@@ -12,7 +12,7 @@ export function CountdownProvider({ children }) {
 
     // Listen for server updates
     socket.on('countdownUpdate', (newCountdown) => {
-      console.log('⏳ Received countdown update from server:', newCountdown);
+     
       setCountdown(newCountdown);
     });
 

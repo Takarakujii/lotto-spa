@@ -2,59 +2,26 @@ import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router";
 import useAccountForm from "../service/useAccountForm";
-import useSocket from '../hooks/useSocket'; 
-import axios from "axios";
+import { useCountdown } from "../service/CountdownContext";
+import { generateNewDraw, fetchLastWinningNumber, placeBet } from "../service/apiService";
 
 const DrawPage = () => {
   const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
   const [activeModalIndex, setActiveModalIndex] = useState(null);
-  const { countdown } = useSocket(); 
-  const [seconds, setSeconds] = useState(0); 
+  const countdown = useCountdown();
+  const [seconds, setSeconds] = useState(0);
   const [minutes, setMinutes] = useState(1);
   const [animate, setAnimate] = useState(false);
   const [error, setError] = useState(null);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
-  const [lastDrawNumbers, setLastDrawNumbers] = useState([]); // State for last draw numbers
+  const [lastDrawNumbers, setLastDrawNumbers] = useState([]);
 
   const { balance, handleAccountForm } = useAccountForm();
   const navigate = useNavigate();
 
-  
-
-  // Fetch account data when the component mounts
   useEffect(() => {
     handleAccountForm();
   }, [handleAccountForm]);
-
-  // Function to generate a new draw
-  const generateNewDraw = async () => {
-    try {
-      const response = await axios.post(
-        "http://localhost:8080/v1/draw/",
-        {}, 
-        {
-          headers: {
-            apikey: "hotdog", // Add your API key if required
-            "Content-Type": "application/json",
-            token: localStorage.getItem("token"), // Add authentication token if required
-          },
-          withCredentials: true,
-        }
-      );
-
-      if (response.data.success) {
-        console.log("New draw generated:", response.data);
-      } else {
-        setError(response.data.message || "Failed to generate a new draw.");
-      }
-    } catch (error) {
-      console.error("Error generating new draw:", error);
-      setError(
-        error.response?.data?.message ||
-          "An error occurred while generating a new draw."
-      );
-    }
-  };
 
   // Countdown logic
   useEffect(() => {
@@ -66,34 +33,45 @@ const DrawPage = () => {
     if (countdown === 0) {
       setAnimate(true);
       setTimeout(() => setAnimate(false), 3000);
-      generateNewDraw(); 
+      handleGenerateNewDraw();
     }
   }, [countdown]);
 
-  // Fetch the last winning number
-  const fetchLastWinningNumber = async () => {
+  const handleGenerateNewDraw = async () => {
     try {
-      const response = await axios.get("http://localhost:8080/v1/draw/last", {
-        headers: {
-          apikey: "hotdog", 
-          token: localStorage.getItem("token"), 
-        },
-      });
-
-      if (response.data && response.data.lastDraw && response.data.lastDraw.winning_number) {
-        const lastWinningNumber = response.data.lastDraw.winning_number.split("-").map(Number);
-        setLastDrawNumbers(lastWinningNumber); // Update the last draw numbers
+      const response = await generateNewDraw();
+      if (response.success) {
+        console.log("New draw generated:", response);
+        // Refresh the last winning numbers after new draw
+        handleFetchLastWinningNumber();
       } else {
-        console.error("Unexpected API response structure:", response.data);
+        setError(response.message || "Failed to generate a new draw.");
+      }
+    } catch (error) {
+      console.error("Error generating new draw:", error);
+      setError(
+        error.response?.data?.message ||
+          "An error occurred while generating a new draw."
+      );
+    }
+  };
+
+  const handleFetchLastWinningNumber = async () => {
+    try {
+      const response = await fetchLastWinningNumber();
+      if (response && response.lastDraw && response.lastDraw.winning_number) {
+        const lastWinningNumber = response.lastDraw.winning_number.split("-").map(Number);
+        setLastDrawNumbers(lastWinningNumber);
+      } else {
+        console.error("Unexpected API response structure:", response);
       }
     } catch (err) {
       console.error("Error fetching last draw:", err);
     }
   };
 
-  // Fetch the last winning number when the component mounts
   useEffect(() => {
-    fetchLastWinningNumber();
+    handleFetchLastWinningNumber();
   }, []);
 
   const formatTime = (time) => {
@@ -161,27 +139,12 @@ const DrawPage = () => {
       .join("-");
 
     try {
-      const response = await axios.post(
-        "http://localhost:8080/v1/bet",
-        {
-          betAmount: "50",
-          betNumber: formattedBetNumber,
-        },
-        {
-          headers: {
-            apikey: "hotdog",
-            "Content-Type": "application/json",
-            token: localStorage.getItem("token"),
-          },
-          withCredentials: true,
-        }
-      );
-
-      if (response.data.success) {
-        console.log(response.data);
+      const response = await placeBet(formattedBetNumber);
+      if (response.success) {
+        console.log(response);
         handleAccountForm();
       } else {
-        setError(response.data.message || "Bet failed. Please try again.");
+        setError(response.message || "Bet failed. Please try again.");
       }
     } catch (error) {
       console.error("Error during bet", error);
