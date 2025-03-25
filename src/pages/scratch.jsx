@@ -1,81 +1,54 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import useSocket from "../hooks/useSocket";
 import { useNavigate } from "react-router";
 import useAccountForm from "../service/useAccountForm";
-import { useCountdown } from "../service/CountdownContext";
-import { generateNewDraw, fetchLastWinningNumber, placeBet } from "../service/apiService";
-import BurgerMenu from "../components/BurgerMenu";
+import axios from "axios";
+import BurgerMenu from "../components/BurgerMenu"; // Import the BurgerMenu component
 
 const DrawPage = () => {
   const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
   const [activeModalIndex, setActiveModalIndex] = useState(null);
-  const countdown = useCountdown();
+  const { countdown } = useSocket();
   const [seconds, setSeconds] = useState(0);
   const [minutes, setMinutes] = useState(1);
   const [animate, setAnimate] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
   const [error, setError] = useState(null);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
-  const [lastDrawNumbers, setLastDrawNumbers] = useState([]);
   const [potMoney, setPotMoney] = useState(5230850); // Initial pot money state
-  
 
   const { balance, handleAccountForm } = useAccountForm();
-  const navigate = useNavigate();
 
+  // Fetch account data when the component mountsg
   useEffect(() => {
     handleAccountForm();
+    // In a real implementation, you would fetch the pot money from the API
+    // For now, we'll just use the static value or you could add an API call here
   }, [handleAccountForm]);
 
-  // Countdown logic
+  const navigate = useNavigate(); // Initialize useNavigate
+
   useEffect(() => {
+    // Update the minutes and seconds based on the countdown value
     const newMinutes = Math.floor(countdown / 60);
     const newSeconds = countdown % 60;
     setMinutes(newMinutes);
     setSeconds(newSeconds);
 
+    // Trigger animation when countdown reaches 0
     if (countdown === 0) {
       setAnimate(true);
-      setTimeout(() => setAnimate(false), 3000);
-      handleGenerateNewDraw();
+      setIsResetting(true); // Show resetting state
+      handleReset(true);
+
+      // Hide the animation and resetting state after 3 seconds
+      setTimeout(() => {
+        setAnimate(false);
+        setIsResetting(false);
+      }, 3000);
     }
   }, [countdown]);
-
-  const handleGenerateNewDraw = async () => {
-    try {
-      const response = await generateNewDraw();
-      if (response.success) {
-        console.log("New draw generated:", response);
-        // Refresh the last winning numbers after new draw
-        handleFetchLastWinningNumber();
-      } else {
-        setError(response.message || "Failed to generate a new draw.");
-      }
-    } catch (error) {
-      console.error("Error generating new draw:", error);
-      setError(
-        error.response?.data?.message ||
-          "An error occurred while generating a new draw."
-      );
-    }
-  };
-
-  const handleFetchLastWinningNumber = async () => {
-    try {
-      const response = await fetchLastWinningNumber();
-      if (response && response.lastDraw && response.lastDraw.winning_number) {
-        const lastWinningNumber = response.lastDraw.winning_number.split("-").map(Number);
-        setLastDrawNumbers(lastWinningNumber);
-      } else {
-        console.error("Unexpected API response structure:", response);
-      }
-    } catch (err) {
-      console.error("Error fetching last draw:", err);
-    }
-  };
-
-  useEffect(() => {
-    handleFetchLastWinningNumber();
-  }, []);
 
   const formatTime = (time) => {
     return time < 10 ? `0${time}` : time;
@@ -85,7 +58,7 @@ const DrawPage = () => {
     if (text === "Top Up") {
       navigate("/profile");
     } else if (text === "History") {
-      navigate("/history");
+      console.log("History button clicked");
     } else if (text === "Logout") {
       navigate("/signin");
     }
@@ -93,6 +66,7 @@ const DrawPage = () => {
 
   const handleOpenModal = (index) => {
     setActiveModalIndex(index);
+    // Clear any previous errors when opening the modal
     setError(null);
     setInsufficientFunds(false);
   };
@@ -102,8 +76,11 @@ const DrawPage = () => {
   };
 
   const handleSelectNumber = (number) => {
+    // Check if the number is already selected
     if (selectedNumbers.includes(number)) {
-      setError("This number is already selected. Please choose a different number.");
+      setError(
+        "This number is already selected. Please choose a different number."
+      );
       return;
     }
 
@@ -111,6 +88,7 @@ const DrawPage = () => {
     newSelectedNumbers[activeModalIndex] = number;
     setSelectedNumbers(newSelectedNumbers);
     setActiveModalIndex(null);
+    // Clear any previous errors
     setError(null);
   };
 
@@ -120,9 +98,11 @@ const DrawPage = () => {
     setInsufficientFunds(false);
   };
 
+  // Generate numbers 1-45 for lottery selection
   const numberOptions = Array.from({ length: 45 }, (_, i) => i + 1);
 
   const handleBet = async () => {
+    // Clear previous errors
     setError(null);
     setInsufficientFunds(false);
 
@@ -131,23 +111,43 @@ const DrawPage = () => {
       return;
     }
 
+    // Check if user has enough balance (assuming bet amount is fixed at 50)
     if (balance < 50) {
       setError("Insufficient funds to place bet. Please top up your account.");
       setInsufficientFunds(true);
       return;
     }
 
+    // Format numbers as "xx-xx-xx-xx-xx-xx"
     const formattedBetNumber = selectedNumbers
       .map((num) => String(num).padStart(2, "0"))
       .join("-");
+    console.log(formattedBetNumber);
 
     try {
-      const response = await placeBet(formattedBetNumber);
-      if (response.success) {
-        console.log(response);
+      const response = await axios.post(
+        "http://localhost:8080/v1/bet",
+        {
+          betAmount: "50",
+          betNumber: formattedBetNumber, // Formatted bet number
+        },
+        {
+          headers: {
+            apikey: "hotdog",
+            "Content-Type": "application/json",
+            token: localStorage.getItem("token"),
+          },
+          withCredentials: true,
+        }
+      );
+
+      console.log(response.data);
+      if (response.data.success) {
+        console.log(response.data);
+        // Update the account balance after successful bet
         handleAccountForm();
       } else {
-        setError(response.message || "Bet failed. Please try again.");
+        setError(response.data.message || "Bet failed. Please try again.");
       }
     } catch (error) {
       console.error("Error during bet", error);
@@ -156,12 +156,14 @@ const DrawPage = () => {
           "An error occurred while placing your bet."
       );
 
+      // If the error is due to insufficient funds
       if (error.response?.data?.message?.includes("insufficient")) {
         setInsufficientFunds(true);
       }
     }
   };
 
+  // Check if a number is already selected
   const isNumberSelected = (number) => {
     return selectedNumbers.includes(number);
   };
@@ -402,7 +404,7 @@ const DrawPage = () => {
                 LAST DRAW
               </h2>
               <div className="p-4 rounded-lg border-2 border-cyan-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
-                {lastDrawNumbers.map((num, index) => (
+                {[12, 9, 43, 19, 22, 6].map((num, index) => (
                   <div
                     key={index}
                     className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-cyan-400 font-bold border border-cyan-800"

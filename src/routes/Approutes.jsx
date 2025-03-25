@@ -7,7 +7,7 @@ import DrawPage from '../pages/DrawPage';
 import AccountProfilePage from '../pages/AccountProfile';
 import History from '../pages/DrawHistoryPage';
 import Notification from '../components/DisplayWinningNotification';
-
+import Scrap from '../pages/scratch';
 const AppRoutes = () => {
   return (
     <Routes>
@@ -19,6 +19,7 @@ const AppRoutes = () => {
       <Route path="/profile" element={<AccountProfilePage/>} />
       <Route path="/history" element={<History/>} />
       <Route path="/notification" element={<Notification />} />
+      <Route path="/scrap" element={<Scrap />} />
     </Routes>
   );
 };
