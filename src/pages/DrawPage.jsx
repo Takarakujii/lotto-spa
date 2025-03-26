@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { X } from "lucide-react";
 import { useNavigate } from "react-router";
-import useAccountForm from "../service/useAccountForm";
+import useAccountForm from "../service/FetchAccount";
 import { useCountdown } from "../service/CountdownContext";
-import { generateNewDraw, fetchLastWinningNumber, placeBet } from "../service/apiService";
 import BurgerMenu from "../components/BurgerMenu";
+import { placeBet } from "../service/BetService";
+import { generateNewDraw, fetchLastWinningNumber } from "../service/DrawService";
 
 const DrawPage = () => {
   const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
@@ -15,7 +16,7 @@ const DrawPage = () => {
   const [animate, setAnimate] = useState(false);
   const [error, setError] = useState(null);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
-  const [lastDrawNumbers, setLastDrawNumbers] = useState([]);
+  const [lastDrawNumbers, setLastDrawNumbers] = useState([0, 0, 0, 0, 0, 0]);
   const [potMoney, setPotMoney] = useState(5230850); // Initial pot money state
   
 

@@ -1,32 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { useCountdown } from '../service/CountdownContext';
-
+import { fetchLastWinningNumber, generateNewDraw } from '../service/DrawService';
 
 const LandingPage = () => {
-    const countdown = useCountdown()
+    const countdown = useCountdown();
     const [isHovered, setIsHovered] = useState(false);
     const [animate, setAnimate] = useState(false);
+    const [lastDrawNumbers, setLastDrawNumbers] = useState([0, 0, 0, 0, 0, 0]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [minutes, setMinutes] = useState(0);
+    const [seconds, setSeconds] = useState(0);
 
-
-    const minutes = Math.floor(countdown / 60);
-    const seconds = countdown % 60;
-
+    // Fetch last winning numbers
     useEffect(() => {
+        const fetchDrawData = async () => {
+            try {
+                const response = await fetchLastWinningNumber();
+                if (response?.lastDraw?.winning_number) {
+                    const numbers = response.lastDraw.winning_number.split('-').map(Number);
+                    setLastDrawNumbers(numbers);
+                }
+            } catch (err) {
+                console.error("Failed to fetch last draw:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchDrawData();
+    }, []);
+
+    // Countdown animation effect
+    useEffect(() => {
+        const newMinutes = Math.floor(countdown / 60);
+        const newSeconds = countdown % 60;
+        setMinutes(newMinutes);
+        setSeconds(newSeconds);
+
         if (countdown === 0) {
             setAnimate(true);
-    
             const timer = setTimeout(() => {
                 setAnimate(false);
-            }, 3000); // Ensure it disappears after 3 seconds
-    
+                // Generate new draw when countdown reaches 0
+                handleGenerateNewDraw();
+            }, 3000);
             return () => clearTimeout(timer);
         } else {
-            setAnimate(false); // Reset animation when countdown is not zero
+            setAnimate(false);
         }
     }, [countdown]);
-    
 
- 
+    const handleGenerateNewDraw = async () => {
+        try {
+            const response = await generateNewDraw();
+            if (response?.success) {
+                // Refresh the last winning numbers after new draw
+                const fetchResponse = await fetchLastWinningNumber();
+                if (fetchResponse?.lastDraw?.winning_number) {
+                    const numbers = fetchResponse.lastDraw.winning_number.split('-').map(Number);
+                    setLastDrawNumbers(numbers);
+                }
+            }
+        } catch (error) {
+            console.error("Error generating new draw:", error);
+        }
+    };
+
     const formatTime = (time) => {
         return time < 10 ? `0${time}` : time;
     };
@@ -35,17 +74,17 @@ const LandingPage = () => {
         <div className="relative min-h-screen overflow-hidden" style={{
             background: "linear-gradient(180deg, #0a001a 0%, #1f0040 100%)"
         }}>
-            {/* Neon grid lines in background */}
-            <div className="absolute inset-0 overflow-hidden opacity-20 ">
+            {/* Background elements */}
+            <div className="absolute inset-0 overflow-hidden opacity-20">
                 <div className="absolute w-full h-full" style={{
                     backgroundImage: "linear-gradient(0deg, transparent 24%, rgba(32, 216, 255, 0.3) 25%, rgba(32, 216, 255, 0.3) 26%, transparent 27%, transparent 74%, rgba(32, 216, 255, 0.3) 75%, rgba(32, 216, 255, 0.3) 76%, transparent 77%, transparent), linear-gradient(90deg, transparent 24%, rgba(32, 216, 255, 0.3) 25%, rgba(32, 216, 255, 0.3) 26%, transparent 27%, transparent 74%, rgba(32, 216, 255, 0.3) 75%, rgba(32, 216, 255, 0.3) 76%, transparent 77%, transparent)",
                     backgroundSize: "50px 50px",
                 }} />
             </div>
 
-            {/* Floating neon orbs */}
+            {/* Floating orbs using actual draw numbers */}
             <div className="absolute inset-0 overflow-hidden">
-                {[1, 2, 3, 4, 5].map((_, index) => (
+                {lastDrawNumbers.map((_, index) => (
                     <div key={index} className="absolute rounded-full blur-lg" style={{
                         width: `${Math.random() * 100 + 50}px`,
                         height: `${Math.random() * 100 + 50}px`,
@@ -57,10 +96,10 @@ const LandingPage = () => {
                 ))}
             </div>
 
-            {/* Main container */}
+            {/* Main content */}
             <div className="container mx-auto px-4 py-16 relative z-10 flex justify-center items-center h-screen">
                 <div className="flex flex-col md:flex-row justify-center items-center gap-20 w-full h-full">
-
+                    
                     {/* Left side - Logo and button */}
                     <div className="flex-1 flex flex-col items-center justify-center">
                         <div className="mb-6 relative animate-pulse">
@@ -89,7 +128,6 @@ const LandingPage = () => {
                             PICK YOUR NUMBERS • WIN THE JACKPOT
                         </p>
 
-                        {/* Start button */}
                         <button
                             className="relative px-16 py-4 text-lg font-bold rounded-md transform transition-all duration-300"
                             style={{
@@ -103,9 +141,7 @@ const LandingPage = () => {
                             }}
                             onMouseEnter={() => setIsHovered(true)}
                             onMouseLeave={() => setIsHovered(false)}
-                            onClick={() => {
-                                window.location.href = '/signin';
-                            }}
+                            onClick={() => window.location.href = '/signin'}
                         >
                             START
                         </button>
@@ -113,42 +149,55 @@ const LandingPage = () => {
 
                     {/* Right side - Results */}
                     <div className="flex-1 flex flex-col items-center justify-center mt-12 md:mt-0">
-                        {/* Last Draw */}
+                        {/* Last Draw Section */}
                         <div className="mb-12 w-full max-w-md">
-                            <h2 className="text-white text-2xl mb-4" style={{
-                                color: "#ffcc00",
-                                textShadow: "0 0 5px #ffcc00"
-                            }}>LAST DRAW</h2>
+                            <div className="flex justify-between items-center mb-4">
+                                <h2 className="text-white text-2xl" style={{
+                                    color: "#ffcc00",
+                                    textShadow: "0 0 5px #ffcc00"
+                                }}>
+                                    LAST DRAW
+                                </h2>
+                            </div>
+
                             <div className="p-4 flex justify-center gap-2" style={{
                                 background: "rgba(0, 0, 0, 0.5)",
                                 boxShadow: "0 0 10px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.2)",
                                 borderRadius: "10px",
                                 border: "1px solid rgba(0, 255, 255, 0.3)"
                             }}>
-                                {[12, 9, 43, 19, 22, 6].map((num, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl"
-                                        style={{
-                                            background: "rgba(0,0,0,0.7)",
-                                            border: "1px solid rgba(0, 255, 255, 0.5)",
-                                            boxShadow: "0 0 5px rgba(0, 255, 255, 0.5)",
-                                            color: "#00ffff",
-                                            textShadow: "0 0 5px #00ffff"
-                                        }}
-                                    >
-                                        {num}
-                                    </div>
-                                ))}
+                                {isLoading ? (
+                                    [...Array(6)].map((_, idx) => (
+                                        <div key={idx} className="w-12 h-12 rounded-full bg-gray-700 animate-pulse"></div>
+                                    ))
+                                ) : (
+                                    lastDrawNumbers.map((num, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xl"
+                                            style={{
+                                                background: "rgba(0,0,0,0.7)",
+                                                border: "1px solid rgba(0, 255, 255, 0.5)",
+                                                boxShadow: "0 0 5px rgba(0, 255, 255, 0.5)",
+                                                color: "#00ffff",
+                                                textShadow: "0 0 5px #00ffff"
+                                            }}
+                                        >
+                                            {num}
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
 
-                        {/* Draw Countdown with neon effects */}
+                        {/* Draw Countdown */}
                         <div className="w-full max-w-md">
                             <h2 className="text-white text-2xl mb-4" style={{
                                 color: "#ffcc00",
                                 textShadow: "0 0 5px #ffcc00"
-                            }}>DRAW COUNTDOWN</h2>
+                            }}>
+                                DRAW COUNTDOWN
+                            </h2>
                             <div className="p-6 flex justify-center gap-8" style={{
                                 background: "rgba(0, 0, 0, 0.5)",
                                 boxShadow: "0 0 10px rgba(255, 0, 255, 0.5), inset 0 0 10px rgba(255, 0, 255, 0.2)",
@@ -168,7 +217,9 @@ const LandingPage = () => {
                                     <p className="mt-2" style={{
                                         color: "#ff00ff",
                                         textShadow: "0 0 5px #ff00ff"
-                                    }}>MINUTES</p>
+                                    }}>
+                                        MINUTES
+                                    </p>
                                 </div>
                                 <div className="text-center">
                                     <div className="w-24 h-24 flex items-center justify-center text-6xl font-bold rounded-md" style={{
@@ -183,7 +234,9 @@ const LandingPage = () => {
                                     <p className="mt-2" style={{
                                         color: "#ff00ff",
                                         textShadow: "0 0 5px #ff00ff"
-                                    }}>SECONDS</p>
+                                    }}>
+                                        SECONDS
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -204,7 +257,7 @@ const LandingPage = () => {
                 </div>
             )}
 
-            {/* CSS for floating animation */}
+            {/* CSS animations */}
             <style jsx="true">{`
                 @keyframes float {
                     0% { transform: translateY(0px) translateX(0px); }
