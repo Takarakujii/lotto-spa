@@ -1,6 +1,7 @@
 import React from "react";
-import { Menu, Calendar, Trophy, Hash } from "lucide-react";
+import { Calendar, Trophy, Hash } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import BurgerMenu from "../components/BurgerMenu";
 
 const DrawHistoryPage = () => {
   
@@ -95,7 +96,7 @@ const DrawHistoryPage = () => {
               textShadow: "0 0 5px #00ffff",
             }}
           >
-            <Menu size={32} /> {/* Lucide Menu Icon */}
+            <BurgerMenu />
           </div>
         </header>
 

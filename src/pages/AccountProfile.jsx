@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import useAccountForm from "../service/FetchAccount";
-import axios from "axios";
 import BurgerMenu from "../components/BurgerMenu"; // Using your current filename
+import { topUpAccount } from "../service/TopupService";
 
 const AccountProfilePage = () => {
   const [isHovered, setIsHovered] = useState({
@@ -44,36 +44,17 @@ const AccountProfilePage = () => {
   };
 
   const handleTopUp = async () => {
-    if (topUpAmount <= 0) {
-      setError("Please enter a valid amount.");
-      return;
-    }
-
     try {
-      const response = await axios.post(
-        "http://localhost:8080/v1/topup",
-        {
-          amount: topUpAmount,
-        },
-        {
-          headers: {
-            apikey: "hotdog",
-            "Content-Type": "application/json",
-            token: localStorage.getItem("token"),
-          },
-          withCredentials: true,
-        }
-      );
-
-      if (response.data.success) {
+      const response = await topUpAccount(topUpAmount); 
+      if (response.success) {
         setTopUpAmount(0);
-        handleAccountForm(); // Refresh the balance after top-up
+        handleAccountForm(); 
       } else {
         setError("Top-up failed. Please try again.");
       }
     } catch (error) {
       console.error("Error during top-up:", error);
-      setError("An error occurred. Please try again.");
+      setError(error.message); 
     }
   };
 

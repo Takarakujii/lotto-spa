@@ -6,7 +6,7 @@ const BurgerMenu = () => {
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
-  // Close menu when clicking outside
+  
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -30,8 +30,7 @@ const BurgerMenu = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+    navigate("/");
     setIsOpen(false);
   };
 
@@ -89,7 +88,7 @@ const BurgerMenu = () => {
             { name: "PROFILE", path: "/profile", icon: "👤", color: "#ff00ff" },
             {
               name: "DRAW HISTORY",
-              path: "/draw-history",
+              path: "/history",
               icon: "📜",
               color: "#ffcc00",
             },
