@@ -60,7 +60,7 @@ async function createCustomServer() {
       countdownState.countdown = countdown;
       countdownState.io.forEach(io => io.emit("countdownUpdate", countdown));
     });
-    console.log(`Slave instance connected to Master at ${PRIMARY}`);
+    console.log(`Slave instance connected to Primary at ${PRIMARY}`);
   }
 
   let vite;
@@ -110,56 +110,20 @@ async function createCustomServer() {
     }
   });
 
-  
-  // let countdown = 60; 
 
-  // const startCountdown = () => {
-  //   setInterval(() => {
-  //     countdown--;
-
-  //     if (countdown < 0) {
-  //       countdown = 60; 
-  //     }
-
-      
-  //     io.emit('countdown', countdown); 
-  //   }, 1000);
-  // };
 
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id} on port ${process.env.PORT}`);
     console.log('✅ New client connected:', socket.id);
 
-    // Send the current countdown when a new client connects
+   
     if (isPRIMARY) {
             countdownState.slaves.push(socket);
             socket.emit('countdownUpdate', countdownState.countdown);
     
-            // socket.on("placeBet", (betData) => {
-            //     placeBet(socket, betData); 
-            // });
-    
         } else {
             socket.emit("countdownUpdate", countdownState.countdown);
     
-    //         socket.on("placeBet", (betData) => {
-    //             console.log(`Forwarding placeBet from ${process.env.PORT} to Master`);
-    //             if (masterSocket) {
-    //                 masterSocket.emit("placeBet", betData);
-    //             }
-    //         });
-    
-    //         masterSocket.on("betResponse", (response) => {
-    //             socket.emit("betResponse", response);
-    //         });
-    
-    //         masterSocket.on("bettingHistoryUpdate", (data) => {
-    //             socket.emit("bettingHistoryUpdate", data);
-    //         });
-    
-    //         masterSocket.on("jackpotUpdate", (data) => {
-    //             socket.emit("jackpotUpdate", data);
-    //         });
         }
     });
     if (isPRIMARY && !countdownState.interval) {
