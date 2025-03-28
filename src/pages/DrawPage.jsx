@@ -38,6 +38,7 @@ const DrawPage = () => {
     if (countdown === 0) {
       setAnimate(true);
       handleGenerateNewDraw();
+      handleFetchPot();
 
       setTimeout(() => {
         setAnimate(false);
