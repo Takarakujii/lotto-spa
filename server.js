@@ -32,10 +32,8 @@ const startCountdown = () => {
       countdownState.countdown = 60;
       startCountdown();
     }
-
     countdownState.io.forEach(io => io.emit("countdownUpdate", countdownState.countdown));
     countdownState.slaves.forEach(slave => slave.emit("countdownUpdate", countdownState.countdown));
-
   }, 1000);
 };
 
@@ -45,16 +43,50 @@ async function createCustomServer() {
   const server = createServer(app);
   const io = new Server(server, {
     cors: {
-      origin: '*', 
-      methods: ['GET', 'POST'],
-    }
+      origin: '*',
+      methods: ['GET', 'POST']
+    },
+    // Transport configuration
+    transports: ['websocket', 'polling'], // Try WebSocket first, then fallback to polling
+    allowUpgrades: true, // Allow protocol upgrades
+    upgradeTimeout: 10000, // Wait 10 seconds before failing upgrade
+    
+    // WebSocket specific options
+    perMessageDeflate: {
+      threshold: 1024 // Only compress messages > 1KB
+    },
+    
+    // HTTP long-polling options
+    httpCompression: true,
+    cookie: false,
+    
+    // Connection timeouts
+    pingInterval: 5000, // Send ping every 5 seconds
+    pingTimeout: 10000, // Wait 10 seconds for pong
+    connectTimeout: 20000 // Max time for initial connection
   });
-
+  
   countdownState.io.push(io);
   let primarySocket;
 
   if (!isPRIMARY) {
-    primarySocket = client_io(`http://localhost:${PRIMARY}`);
+    primarySocket = client_io(`http://localhost:${PRIMARY}`, {
+      // Connection settings
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
+      
+      // Transport configuration
+      transports: ['websocket', 'polling'],
+      upgrade: true,
+      forceNew: false,
+      rememberUpgrade: true,
+      
+      // Debugging
+      debug: process.env.NODE_ENV !== 'production'
+    });
 
     primarySocket.on("countdownUpdate", (countdown) => {
       countdownState.countdown = countdown;

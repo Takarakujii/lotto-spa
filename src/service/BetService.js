@@ -15,7 +15,7 @@ export const placeBet = async (betNumber) => {
       },
       withCredentials: true
     });
-
+    console.log("check error", response.data)
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Bet failed");
     }

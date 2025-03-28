@@ -33,10 +33,11 @@ export const fetchLastWinningNumber = async () => {
       },
       withCredentials: true
     });
-
+    console.log("last draw", response.data);
     if (!response.data?.success) {
       throw new Error(response.data?.message || "Failed to fetch draw");
     }
+
 
     return response.data;
   } catch (error) {

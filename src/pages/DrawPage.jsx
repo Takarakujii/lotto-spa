@@ -4,11 +4,10 @@ import { useNavigate } from "react-router";
 import useAccountForm from "../service/FetchAccount";
 import { useCountdown } from "../service/CountdownContext";
 import { placeBet } from "../service/BetService";
-import {
-  generateNewDraw,
-  fetchLastWinningNumber,
-} from "../service/DrawService";
+import { generateNewDraw, fetchLastWinningNumber } from "../service/DrawService";
+import { fetchPotAmount } from "../service/FetchPot";
 import Navbar from "../components/Navbar";
+
 
 const DrawPage = () => {
   const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
@@ -20,7 +19,8 @@ const DrawPage = () => {
   const [error, setError] = useState(null);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
   const [lastDrawNumbers, setLastDrawNumbers] = useState([0, 0, 0, 0, 0, 0]);
-  const [potMoney, setPotMoney] = useState(5230850);
+  const [potMoney, setPotMoney] = useState(0); // Initial pot money state
+  
 
   const { balance, handleAccountForm } = useAccountForm();
   const navigate = useNavigate();
@@ -66,10 +66,8 @@ const DrawPage = () => {
   const handleFetchLastWinningNumber = async () => {
     try {
       const response = await fetchLastWinningNumber();
-      if (response && response.lastDraw && response.lastDraw.winning_number) {
-        const lastWinningNumber = response.lastDraw.winning_number
-          .split("-")
-          .map(Number);
+      if (response && response.winning_number) {
+        const lastWinningNumber = response.winning_number.split("-").map(Number);
         setLastDrawNumbers(lastWinningNumber);
       } else {
         console.error("Unexpected API response structure:", response);
@@ -81,6 +79,22 @@ const DrawPage = () => {
 
   useEffect(() => {
     handleFetchLastWinningNumber();
+  }, []);
+
+  const handleFetchPot = async () => {
+    try {
+      const response = await fetchPotAmount();
+      if (response) {
+        const pot_amount = response;
+        setPotMoney(pot_amount);
+      } 
+  } catch (err) {
+    console.error("Error fetching pot:", err);
+  }
+};
+
+  useEffect(() => {
+    handleFetchPot();
   }, []);
 
   const formatTime = (time) => {
