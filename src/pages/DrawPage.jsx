@@ -3,9 +3,12 @@ import { X } from "lucide-react";
 import { useNavigate } from "react-router";
 import useAccountForm from "../service/FetchAccount";
 import { useCountdown } from "../service/CountdownContext";
-import BurgerMenu from "../components/BurgerMenu";
 import { placeBet } from "../service/BetService";
-import { generateNewDraw, fetchLastWinningNumber } from "../service/DrawService";
+import {
+  generateNewDraw,
+  fetchLastWinningNumber,
+} from "../service/DrawService";
+import Navbar from "../components/Navbar";
 
 const DrawPage = () => {
   const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
@@ -17,8 +20,7 @@ const DrawPage = () => {
   const [error, setError] = useState(null);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
   const [lastDrawNumbers, setLastDrawNumbers] = useState([0, 0, 0, 0, 0, 0]);
-  const [potMoney, setPotMoney] = useState(5230850); // Initial pot money state
-  
+  const [potMoney, setPotMoney] = useState(5230850);
 
   const { balance, handleAccountForm } = useAccountForm();
   const navigate = useNavigate();
@@ -27,7 +29,6 @@ const DrawPage = () => {
     handleAccountForm();
   }, [handleAccountForm]);
 
-  // Countdown logic
   useEffect(() => {
     const newMinutes = Math.floor(countdown / 60);
     const newSeconds = countdown % 60;
@@ -36,8 +37,11 @@ const DrawPage = () => {
 
     if (countdown === 0) {
       setAnimate(true);
-      setTimeout(() => setAnimate(false), 3000);
       handleGenerateNewDraw();
+
+      setTimeout(() => {
+        setAnimate(false);
+      }, 3000);
     }
   }, [countdown]);
 
@@ -46,7 +50,6 @@ const DrawPage = () => {
       const response = await generateNewDraw();
       if (response.success) {
         console.log("New draw generated:", response);
-        // Refresh the last winning numbers after new draw
         handleFetchLastWinningNumber();
       } else {
         setError(response.message || "Failed to generate a new draw.");
@@ -64,7 +67,9 @@ const DrawPage = () => {
     try {
       const response = await fetchLastWinningNumber();
       if (response && response.lastDraw && response.lastDraw.winning_number) {
-        const lastWinningNumber = response.lastDraw.winning_number.split("-").map(Number);
+        const lastWinningNumber = response.lastDraw.winning_number
+          .split("-")
+          .map(Number);
         setLastDrawNumbers(lastWinningNumber);
       } else {
         console.error("Unexpected API response structure:", response);
@@ -86,9 +91,9 @@ const DrawPage = () => {
     if (text === "Top Up") {
       navigate("/profile");
     } else if (text === "History") {
-      navigate("/history");
+      navigate("/draw-history");
     } else if (text === "Logout") {
-      navigate("/signin");
+      navigate("/login");
     }
   };
 
@@ -104,7 +109,9 @@ const DrawPage = () => {
 
   const handleSelectNumber = (number) => {
     if (selectedNumbers.includes(number)) {
-      setError("This number is already selected. Please choose a different number.");
+      setError(
+        "This number is already selected. Please choose a different number."
+      );
       return;
     }
 
@@ -167,7 +174,6 @@ const DrawPage = () => {
     return selectedNumbers.includes(number);
   };
 
-  // Format large numbers with commas
   const formatLargeNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
@@ -181,11 +187,14 @@ const DrawPage = () => {
         backgroundSize: "cover",
       }}
     >
-      {/* Glowing orbs background effect */}
+      {/* Background elements */}
       <div className="absolute w-40 h-40 rounded-full bg-blue-500 blur-3xl opacity-20 top-20 left-20"></div>
       <div className="absolute w-48 h-48 rounded-full bg-purple-600 blur-3xl opacity-20 bottom-40 right-20"></div>
       <div className="absolute w-36 h-36 rounded-full bg-blue-400 blur-3xl opacity-10 bottom-20 left-40"></div>
       <div className="absolute w-44 h-44 rounded-full bg-fuchsia-600 blur-3xl opacity-15 top-40 right-40"></div>
+
+      {/* Navbar component */}
+      <Navbar />
 
       <div className="container mx-auto px-4 py-6 relative z-10">
         {/* Grid overlay */}
@@ -198,10 +207,10 @@ const DrawPage = () => {
           }}
         ></div>
 
-        {/* Header with BurgerMenu */}
-        <div className="flex justify-between items-center mb-8">
+        {/* Header */}
+        <div className="flex justify-between items-center mb-4 sm:mb-8">
           <h1
-            className="text-4xl font-bold"
+            className="text-2xl sm:text-4xl font-bold"
             style={{
               fontFamily: "'Futura', sans-serif",
               color: "#ff0044",
@@ -210,16 +219,15 @@ const DrawPage = () => {
           >
             TAKARAKUJI
           </h1>
-          <BurgerMenu />
         </div>
 
-        {/* Pot Money Display - NEW SECTION */}
-        <div className="mb-8 px-4 py-5 rounded-lg border-2 border-yellow-500 bg-gray-800 bg-opacity-30 backdrop-blur-sm text-center">
-          <p className="text-yellow-400 text-lg mb-2 tracking-wider uppercase font-light">
+        {/* Pot Money Display */}
+        <div className="mb-6 sm:mb-8 px-3 py-4 sm:px-4 sm:py-5 rounded-lg border-2 border-yellow-500 bg-gray-800 bg-opacity-30 backdrop-blur-sm text-center">
+          <p className="text-yellow-400 text-sm sm:text-lg mb-1 sm:mb-2 tracking-wider uppercase font-light">
             Current Jackpot
           </p>
           <div
-            className="text-5xl font-bold"
+            className="text-3xl sm:text-5xl font-bold"
             style={{
               color: "#ffdd00",
               textShadow: "0 0 10px #ffdd00, 0 0 15px #ffdd00",
@@ -227,24 +235,24 @@ const DrawPage = () => {
           >
             ₱{formatLargeNumber(potMoney)}
           </div>
-          <p className="text-yellow-200 text-sm mt-2 italic">
+          <p className="text-yellow-200 text-xs sm:text-sm mt-1 sm:mt-2 italic">
             Match all 6 numbers to win the grand prize!
           </p>
         </div>
 
         {/* Main content */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="space-y-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Draw Ticket Section */}
             <div>
-              <h2 className="text-yellow-400 text-3xl mb-4 font-light">
+              <h2 className="text-yellow-400 text-xl sm:text-3xl mb-3 sm:mb-4 font-light">
                 DRAW TICKET
               </h2>
-              <div className="p-4 rounded-lg border-2 border-gray-700 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
+              <div className="p-3 sm:p-4 rounded-lg border-2 border-gray-700 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
                 {selectedNumbers.map((number, index) => (
                   <div
                     key={index}
-                    className={`w-12 h-12 rounded-md flex items-center justify-center cursor-pointer transition-all hover:shadow-lg ${
+                    className={`w-8 h-8 sm:w-12 sm:h-12 rounded-md flex items-center justify-center cursor-pointer transition-all hover:shadow-lg ${
                       number === null
                         ? "bg-gray-300"
                         : insufficientFunds
@@ -258,10 +266,9 @@ const DrawPage = () => {
                 ))}
               </div>
 
-              {/* Error message display */}
               {error && (
                 <div
-                  className={`mt-3 p-2 rounded-md text-center ${
+                  className={`mt-2 sm:mt-3 p-2 rounded-md text-center text-sm sm:text-base ${
                     insufficientFunds
                       ? "bg-red-900 bg-opacity-30 text-red-300"
                       : "bg-yellow-900 bg-opacity-30 text-yellow-300"
@@ -273,9 +280,9 @@ const DrawPage = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="flex space-x-10 justify-center">
+            <div className="flex space-x-4 sm:space-x-10 justify-center">
               <button
-                className="px-20 py-4 border-2 border-fuchsia-500 rounded-md text-fuchsia-400 font-bold tracking-widest text-xl hover:bg-cyan-900 hover:bg-opacity-30 transition-all transform hover:scale-105"
+                className="px-8 sm:px-20 py-3 sm:py-4 border-2 border-fuchsia-500 rounded-md text-fuchsia-400 font-bold tracking-widest text-base sm:text-xl hover:bg-cyan-900 hover:bg-opacity-30 transition-all transform hover:scale-105"
                 style={{
                   textShadow: "0 0 10px #ff00ff, 0 0 10px #ff00ff",
                   boxShadow: "0 0 10px rgba(255, 0, 255, 0.5)",
@@ -285,7 +292,7 @@ const DrawPage = () => {
                 Reset
               </button>
               <button
-                className={`px-20 py-4 border-2 rounded-md font-bold tracking-widest text-xl hover:bg-opacity-30 transition-all transform hover:scale-105 ${
+                className={`px-8 sm:px-20 py-3 sm:py-4 border-2 rounded-md font-bold tracking-widest text-base sm:text-xl hover:bg-opacity-30 transition-all transform hover:scale-105 ${
                   insufficientFunds
                     ? "border-red-500 text-red-400 hover:bg-red-900"
                     : "border-cyan-500 text-cyan-400 hover:bg-cyan-900"
@@ -304,11 +311,10 @@ const DrawPage = () => {
               </button>
             </div>
 
-            {/* Account Info - Redesigned */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Account Balance - Restyled */}
+            {/* Account Info */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
               <div
-                className={`p-4 rounded-lg border-2 bg-gray-800 bg-opacity-30 backdrop-blur-sm h-64 ${
+                className={`p-3 sm:p-4 rounded-lg border-2 bg-gray-800 bg-opacity-30 backdrop-blur-sm h-48 sm:h-64 ${
                   insufficientFunds ? "border-red-700" : "border-cyan-700"
                 }`}
                 style={{
@@ -317,17 +323,17 @@ const DrawPage = () => {
                     : "0 0 15px rgba(8, 145, 178, 0.2) inset",
                 }}
               >
-                <div className="p-4 rounded-lg bg-black bg-opacity-50 mb-3 border border-cyan-800 h-full flex flex-col justify-between">
+                <div className="p-3 sm:p-4 rounded-lg bg-black bg-opacity-50 mb-2 sm:mb-3 border border-cyan-800 h-full flex flex-col justify-between">
                   <div>
                     <p
-                      className={`mb-1 font-mono uppercase tracking-wider text-sm ${
+                      className={`mb-1 font-mono uppercase tracking-wider text-xs sm:text-sm ${
                         insufficientFunds ? "text-red-400" : "text-cyan-400"
                       }`}
                     >
                       Account Balance
                     </p>
                     <p
-                      className={`text-3xl font-bold ${
+                      className={`text-xl sm:text-3xl font-bold ${
                         insufficientFunds ? "text-red-300" : "text-white"
                       }`}
                       style={{
@@ -338,12 +344,12 @@ const DrawPage = () => {
                     </p>
 
                     {insufficientFunds && (
-                      <p className="text-red-400 text-sm mt-2">
+                      <p className="text-red-400 text-xs sm:text-sm mt-1 sm:mt-2">
                         Insufficient balance for ₱50 bet
                       </p>
                     )}
                   </div>
-                  <div className="pt-3 border-t border-cyan-900">
+                  <div className="pt-2 sm:pt-3 border-t border-cyan-900">
                     <p className="text-cyan-200 text-xs font-mono">
                       Last transaction:{" "}
                       <span className="text-yellow-400">-₱50.00</span>
@@ -352,9 +358,8 @@ const DrawPage = () => {
                 </div>
               </div>
 
-              {/* Action Buttons - Restyled */}
               <div
-                className="p-4 rounded-lg border-2 border-fuchsia-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex flex-col justify-between h-64"
+                className="p-3 sm:p-4 rounded-lg border-2 border-fuchsia-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex flex-col justify-between h-48 sm:h-64"
                 style={{
                   boxShadow: "0 0 15px rgba(112, 26, 117, 0.2) inset",
                 }}
@@ -362,7 +367,7 @@ const DrawPage = () => {
                 {["History", "Logout", "Top Up"].map((text, index) => (
                   <button
                     key={index}
-                    className={`py-3 px-4 bg-transparent border rounded-md font-mono tracking-wide hover:bg-opacity-20 transition-all transform hover:scale-105 flex justify-between items-center ${
+                    className={`py-2 sm:py-3 px-3 sm:px-4 bg-transparent border rounded-md font-mono tracking-wide hover:bg-opacity-20 transition-all transform hover:scale-105 flex justify-between items-center ${
                       text === "History"
                         ? "border-yellow-500 text-yellow-400"
                         : text === "Logout"
@@ -382,7 +387,7 @@ const DrawPage = () => {
                     }}
                     onClick={() => handleButtonClick(text)}
                   >
-                    <span>{text}</span>
+                    <span className="text-xs sm:text-base">{text}</span>
                     <span>→</span>
                   </button>
                 ))}
@@ -391,22 +396,22 @@ const DrawPage = () => {
           </div>
 
           {/* Right column */}
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Last Draw */}
             <div>
               <h2
-                className="text-yellow-400 text-3xl mb-4 font-light"
+                className="text-yellow-400 text-xl sm:text-3xl mb-3 sm:mb-4 font-light"
                 style={{
                   textShadow: "0 0 10px rgba(250, 204, 21, 0.5)",
                 }}
               >
                 LAST DRAW
               </h2>
-              <div className="p-4 rounded-lg border-2 border-cyan-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
+              <div className="p-3 sm:p-4 rounded-lg border-2 border-cyan-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm flex justify-between">
                 {lastDrawNumbers.map((num, index) => (
                   <div
                     key={index}
-                    className="w-12 h-12 rounded-full bg-gray-900 flex items-center justify-center text-cyan-400 font-bold border border-cyan-800"
+                    className="w-8 h-8 sm:w-12 sm:h-12 rounded-full bg-gray-900 flex items-center justify-center text-cyan-400 font-bold border border-cyan-800 text-sm sm:text-base"
                     style={{
                       boxShadow: "0 0 10px rgba(34, 211, 238, 0.3)",
                     }}
@@ -420,7 +425,7 @@ const DrawPage = () => {
             {/* Draw Countdown */}
             <div>
               <h2
-                className="text-yellow-400 text-3xl mb-4 font-light pt-11"
+                className="text-yellow-400 text-xl sm:text-3xl mb-3 sm:mb-4 font-light pt-6 sm:pt-11"
                 style={{
                   textShadow: "0 0 10px rgba(250, 204, 21, 0.5)",
                 }}
@@ -428,15 +433,15 @@ const DrawPage = () => {
                 DRAW COUNTDOWN
               </h2>
               <div
-                className="p-4 rounded-lg border-2 border-fuchsia-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm h-64 flex items-center justify-center"
+                className="p-3 sm:p-4 rounded-lg border-2 border-fuchsia-900 bg-gray-800 bg-opacity-30 backdrop-blur-sm h-48 sm:h-64 flex items-center justify-center"
                 style={{
                   boxShadow: "0 0 15px rgba(112, 26, 117, 0.2) inset",
                 }}
               >
-                <div className="flex justify-center space-x-4">
-                  <div className="w-32 h-32">
+                <div className="flex justify-center space-x-3 sm:space-x-4">
+                  <div className="w-20 h-20 sm:w-32 sm:h-32">
                     <div
-                      className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-6xl font-bold"
+                      className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-4xl sm:text-6xl font-bold"
                       style={{
                         color: "#ff1493",
                         textShadow: "0 0 10px rgba(255, 20, 147, 0.7)",
@@ -444,12 +449,14 @@ const DrawPage = () => {
                     >
                       {formatTime(minutes)}
                     </div>
-                    <p className="text-center text-gray-400 mt-2">MINUTES</p>
+                    <p className="text-center text-gray-400 mt-1 sm:mt-2 text-xs sm:text-base">
+                      MINUTES
+                    </p>
                   </div>
 
-                  <div className="w-32 h-32">
+                  <div className="w-20 h-20 sm:w-32 sm:h-32">
                     <div
-                      className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-6xl font-bold"
+                      className="w-full h-full bg-black border-2 border-fuchsia-500 rounded-md flex items-center justify-center text-4xl sm:text-6xl font-bold"
                       style={{
                         color: "#ff1493",
                         textShadow: "0 0 10px rgba(255, 20, 147, 0.7)",
@@ -457,7 +464,9 @@ const DrawPage = () => {
                     >
                       {formatTime(seconds)}
                     </div>
-                    <p className="text-center text-gray-400 mt-2">SECONDS</p>
+                    <p className="text-center text-gray-400 mt-1 sm:mt-2 text-xs sm:text-base">
+                      SECONDS
+                    </p>
                   </div>
                 </div>
               </div>
@@ -468,39 +477,52 @@ const DrawPage = () => {
 
       {/* Number Selection Modal */}
       {activeModalIndex !== null && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-2 sm:p-4">
           <div
-            className="bg-gray-900 border-2 border-cyan-500 rounded-lg p-6 w-full max-w-lg relative"
+            className="bg-gray-900 border-2 border-cyan-500 rounded-lg p-4 w-full max-w-xs sm:max-w-md md:max-w-lg relative mx-2"
             style={{
               boxShadow: "0 0 30px rgba(34, 211, 238, 0.4)",
+              maxHeight: "90vh",
+              overflowY: "auto",
             }}
           >
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-cyan-400 text-xl font-bold">Select Number</h3>
+            <div className="flex justify-between items-center mb-3 sm:mb-4">
+              <h3 className="text-cyan-400 text-lg sm:text-xl font-bold">
+                Select Number
+              </h3>
               <button
                 onClick={handleCloseModal}
-                className="text-gray-400 hover:text-white"
+                className="text-gray-400 hover:text-white p-1"
               >
-                <X size={24} />
+                <X size={20} className="w-5 h-5 sm:w-6 sm:h-6" />
               </button>
             </div>
 
-            {/* Show error message in modal if a number is already selected */}
             {error && (
-              <div className="mb-4 p-2 bg-red-900 bg-opacity-30 text-red-300 rounded-md text-center">
+              <div className="mb-2 sm:mb-3 p-2 bg-red-900 bg-opacity-30 text-red-300 rounded-md text-center text-xs sm:text-sm">
                 {error}
               </div>
             )}
 
-            <div className="grid grid-cols-5 gap-3">
+            <div
+              className="grid grid-cols-5 gap-2 sm:gap-3"
+              style={{
+                gridAutoRows: "minmax(0, 1fr)",
+              }}
+            >
               {numberOptions.map((num) => (
                 <button
                   key={num}
-                  className={`w-12 h-12 rounded-md flex items-center justify-center text-white font-bold transition-all transform hover:scale-110 ${
-                    isNumberSelected(num)
-                      ? "bg-green-600 cursor-not-allowed"
-                      : "bg-gray-800 hover:bg-cyan-700"
-                  }`}
+                  className={`
+              aspect-square w-full min-h-[2.5rem] sm:min-h-[3rem]
+              rounded-md flex items-center justify-center 
+              text-white font-bold transition-all transform hover:scale-105 
+              text-sm sm:text-base
+              ${
+                isNumberSelected(num)
+                  ? "bg-green-600 cursor-not-allowed"
+                  : "bg-gray-800 hover:bg-cyan-700"
+              }`}
                   onClick={() => handleSelectNumber(num)}
                   disabled={isNumberSelected(num)}
                 >
