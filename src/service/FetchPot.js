@@ -7,17 +7,16 @@ export const fetchPotAmount = async () => {
     try {
         const response = await axios.get(`${API_BASE_URL}/pot`, {
             headers: {
-                apikey: "hotdog",
-                token: localStorage.getItem('token')
+                apikey: "hotdog"
             },
             withCredentials: true
         });
         
         if (!response.data?.success) {
+            console.log("lalal", response)
             throw new Error(response.data?.message || "Failed to fetch pot amount");
         }
-
-        return response.data.potAmount || 0;
+        return response || 0;
     } catch (error) {
         console.error("Error fetching pot:", error);
         throw error;

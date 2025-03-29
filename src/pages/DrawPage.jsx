@@ -5,46 +5,73 @@ import useAccountForm from "../service/FetchAccount";
 import { useCountdown } from "../service/CountdownContext";
 import { placeBet } from "../service/BetService";
 import { generateNewDraw, fetchLastWinningNumber } from "../service/DrawService";
-import { fetchPotAmount } from "../service/FetchPot";
 import Navbar from "../components/Navbar";
-
+import useSocket from "../hooks/useSocket";
 
 const DrawPage = () => {
+  const { isConnect, socket } = useSocket();
   const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
   const [activeModalIndex, setActiveModalIndex] = useState(null);
-  const countdown = useCountdown();
+  const {countdown, pot} = useCountdown();
   const [seconds, setSeconds] = useState(0);
   const [minutes, setMinutes] = useState(1);
   const [animate, setAnimate] = useState(false);
   const [error, setError] = useState(null);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
   const [lastDrawNumbers, setLastDrawNumbers] = useState([0, 0, 0, 0, 0, 0]);
-  const [potMoney, setPotMoney] = useState(0); // Initial pot money state
+  const [potMoney, setPotMoney] = useState(0); 
+  
+
   
 
   const { balance, handleAccountForm } = useAccountForm();
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (!socket) {
+      console.error("Socket is not connected!");
+      return;
+    }
+  
+    socket.on("Pot", (data) => {
+      console.log(data.amount);
+      if (data) {
+        setPotMoney(data.amount);
+      }
+    });
+  
+    return () => {
+      socket.off("Pot");
+    };
+  }, [socket]); 
+  
+
+  useEffect(() => {
     handleAccountForm();
   }, [handleAccountForm]);
 
+
+  console.log("lala", pot)
   useEffect(() => {
     const newMinutes = Math.floor(countdown / 60);
     const newSeconds = countdown % 60;
     setMinutes(newMinutes);
     setSeconds(newSeconds);
-
+  
     if (countdown === 0) {
       setAnimate(true);
       handleGenerateNewDraw();
-      handleFetchPot();
-
+  
+      
+      setPotMoney((prevPot) => (prevPot !== pot ? pot : prevPot));
+  
       setTimeout(() => {
         setAnimate(false);
       }, 3000);
     }
-  }, [countdown]);
+  }, [countdown, pot]);
+
+  console.log("Updated potMoney:", potMoney, "New pot:", pot);
 
   const handleGenerateNewDraw = async () => {
     try {
@@ -82,21 +109,7 @@ const DrawPage = () => {
     handleFetchLastWinningNumber();
   }, []);
 
-  const handleFetchPot = async () => {
-    try {
-      const response = await fetchPotAmount();
-      if (response) {
-        const pot_amount = response;
-        setPotMoney(pot_amount);
-      } 
-  } catch (err) {
-    console.error("Error fetching pot:", err);
-  }
-};
 
-  useEffect(() => {
-    handleFetchPot();
-  }, []);
 
   const formatTime = (time) => {
     return time < 10 ? `0${time}` : time;
@@ -248,7 +261,7 @@ const DrawPage = () => {
               textShadow: "0 0 10px #ffdd00, 0 0 15px #ffdd00",
             }}
           >
-            ₱{formatLargeNumber(potMoney)}
+            ₱{formatLargeNumber(potMoney || 0)}
           </div>
           <p className="text-yellow-200 text-xs sm:text-sm mt-1 sm:mt-2 italic">
             Match all 6 numbers to win the grand prize!

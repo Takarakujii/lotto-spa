@@ -3,7 +3,7 @@ import { useCountdown } from '../service/CountdownContext';
 import { fetchLastWinningNumber, generateNewDraw } from '../service/DrawService';
 
 const LandingPage = () => {
-    const countdown = useCountdown();
+    const {countdown}  = useCountdown();
     const [isHovered, setIsHovered] = useState(false);
     const [animate, setAnimate] = useState(false);
     const [lastDrawNumbers, setLastDrawNumbers] = useState([0, 0, 0, 0, 0, 0]);

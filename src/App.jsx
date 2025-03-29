@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import TakarakujiLoader from "./pages/loader";
 import AppRoutes from "./routes/Approutes";
 import useSocket from "./hooks/useSocket";
-import { CountdownProvider } from "./service/CountdownContext"; // Wrap with provider
+import { SocketProvider } from "./service/CountdownContext"; // Wrap with provider
 
 function App() {
   const { isConnected } = useSocket();
@@ -36,7 +36,7 @@ function App() {
   }, [isConnected]);
 
   return (
-    <CountdownProvider>
+    <SocketProvider>
       <div className="app-container">
         {loading && !hasShownIntro ? (
           <TakarakujiLoader
@@ -50,7 +50,7 @@ function App() {
           <AppRoutes />
         )}
       </div>
-    </CountdownProvider>
+    </SocketProvider>
   );
 }
 
