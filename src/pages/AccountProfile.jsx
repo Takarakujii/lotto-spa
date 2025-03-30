@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router";
+import { Home, User, Clock, HelpCircle, LogOut } from "lucide-react";
 import useAccountForm from "../service/FetchAccount";
-import BurgerMenu from "../components/BurgerMenu"; // Using your current filename
 import { topUpAccount } from "../service/TopupService";
 
 const AccountProfilePage = () => {
@@ -13,6 +14,11 @@ const AccountProfilePage = () => {
 
   const [topUpAmount, setTopUpAmount] = useState(0);
   const [error, setError] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // Use the custom hook
   const {
@@ -28,6 +34,18 @@ const AccountProfilePage = () => {
   useEffect(() => {
     handleAccountForm();
   }, [handleAccountForm]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      setIsMobile(width <= 768);
+      setIsTablet(width > 768 && width <= 1024);
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   const handleHover = (button, isHovering) => {
     setIsHovered((prev) => ({ ...prev, [button]: isHovering }));
@@ -45,18 +63,168 @@ const AccountProfilePage = () => {
 
   const handleTopUp = async () => {
     try {
-      const response = await topUpAccount(topUpAmount); 
+      const response = await topUpAccount(topUpAmount);
       if (response.success) {
         setTopUpAmount(0);
-        handleAccountForm(); 
+        handleAccountForm();
       } else {
         setError("Top-up failed. Please try again.");
       }
     } catch (error) {
       console.error("Error during top-up:", error);
-      setError(error.message); 
+      setError(error.message);
     }
   };
+
+  const handleNavigation = (path) => {
+    if (path === "/signin") {
+      localStorage.removeItem("token");
+    }
+    navigate(path);
+  };
+
+  // Nav items configuration
+  const topNavItems = [
+    {
+      icon: <Home />,
+      label: "HOME",
+      path: "/home",
+      hoverColor: "text-cyan-400 hover:text-cyan-200",
+    },
+    {
+      icon: <Clock />,
+      label: "HISTORY",
+      path: "/history",
+      hoverColor: "text-yellow-400 hover:text-yellow-200",
+    },
+    {
+      icon: <HelpCircle />,
+      label: "HELP",
+      path: "/help",
+      hoverColor: "text-white hover:text-gray-200",
+    },
+  ];
+
+  const bottomNavItems = [
+    {
+      icon: <User />,
+      label: "PROFILE",
+      path: "/profile",
+      hoverColor: "text-fuchsia-400 hover:text-fuchsia-200",
+    },
+    {
+      icon: <LogOut />,
+      label: "LOGOUT",
+      path: "/signin",
+      hoverColor: "text-red-400 hover:text-red-200",
+    },
+  ];
+
+  // NavItem component
+  const NavItem = ({ item, isExpanded, isActive, onClick }) => (
+    <div
+      className={`flex items-center p-3 m-1 cursor-pointer transition-all duration-300 ease-in-out rounded-lg group ${
+        isExpanded ? "hover:bg-gray-700/50" : "hover:bg-gray-700/30"
+      } ${isActive ? "bg-purple-800/50" : ""}`}
+      onClick={onClick}
+    >
+      <div
+        className={`flex items-center ${isExpanded ? "mr-3" : ""} ${
+          item.hoverColor
+        } transition-all duration-300`}
+      >
+        {React.cloneElement(item.icon, {
+          className:
+            "transition-all duration-300 ease-in-out group-hover:scale-110 group-hover:opacity-90",
+          size: 24,
+        })}
+      </div>
+      {isExpanded && (
+        <span
+          className={`text-sm font-bold transition-all duration-300 ease-in-out ${item.hoverColor}`}
+        >
+          {item.label}
+        </span>
+      )}
+    </div>
+  );
+
+  // Mobile version - bottom navbar
+  const MobileNavbar = () => (
+    <div
+      className="fixed bottom-0 left-0 right-0 z-50 py-2 px-4 flex justify-around items-center transition-all duration-300"
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(20,20,40,0.9) 0%, rgba(30,30,60,0.9) 100%)",
+        boxShadow:
+          "0 0 20px rgba(100,0,255,0.3), inset 0 0 15px rgba(50,0,100,0.5)",
+        borderTop: "2px solid rgba(0,255,255,0.3)",
+      }}
+    >
+      {[...topNavItems, ...bottomNavItems].map((item, index) => (
+        <div
+          key={index}
+          className={`flex flex-col items-center p-2 cursor-pointer rounded-lg transition-all duration-300 ease-in-out ${
+            location.pathname === item.path
+              ? "bg-purple-800/50"
+              : "hover:bg-gray-700/30"
+          }`}
+          onClick={() => handleNavigation(item.path)}
+        >
+          {React.cloneElement(item.icon, {
+            className: `transition-all duration-300 ease-in-out hover:scale-110 ${item.hoverColor}`,
+            size: 24,
+          })}
+        </div>
+      ))}
+    </div>
+  );
+
+  // Desktop/Tablet version - left sidebar
+  const DesktopNavbar = () => (
+    <div
+      className={`fixed top-0 left-0 h-screen z-50 transition-all duration-500 ease-in-out ${
+        isExpanded ? (isTablet ? "w-40" : "w-48") : isTablet ? "w-14" : "w-16"
+      }`}
+      onMouseEnter={() => setIsExpanded(true)}
+      onMouseLeave={() => setIsExpanded(false)}
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(20,20,40,0.9) 0%, rgba(30,30,60,0.9) 100%)",
+        boxShadow:
+          "0 0 20px rgba(100,0,255,0.3), inset 0 0 15px rgba(50,0,100,0.5)",
+        borderRight: "2px solid rgba(0,255,255,0.3)",
+      }}
+    >
+      <div className="h-full flex flex-col justify-between p-2">
+        {/* Top section */}
+        <div>
+          {topNavItems.map((item, index) => (
+            <NavItem
+              key={`top-${index}`}
+              item={item}
+              isExpanded={isExpanded}
+              isActive={location.pathname === item.path}
+              onClick={() => handleNavigation(item.path)}
+            />
+          ))}
+        </div>
+
+        {/* Bottom section */}
+        <div>
+          {bottomNavItems.map((item, index) => (
+            <NavItem
+              key={`bottom-${index}`}
+              item={item}
+              isExpanded={isExpanded}
+              isActive={location.pathname === item.path}
+              onClick={() => handleNavigation(item.path)}
+            />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div
@@ -65,6 +233,9 @@ const AccountProfilePage = () => {
         background: "linear-gradient(180deg, #0a001a 0%, #1f0040 100%)",
       }}
     >
+      {/* Render appropriate navbar based on screen size */}
+      {isMobile ? <MobileNavbar /> : <DesktopNavbar />}
+
       {/* Neon grid lines in background */}
       <div className="absolute inset-0 overflow-hidden opacity-20">
         <div
@@ -100,8 +271,20 @@ const AccountProfilePage = () => {
         ))}
       </div>
 
-      {/* Wrap both header and main in a container */}
-      <div className="relative z-10 container mx-auto">
+      {/* Main content container */}
+      <div
+        className={`relative z-10 ${
+          isMobile
+            ? ""
+            : isExpanded
+            ? isTablet
+              ? "ml-40"
+              : "ml-48"
+            : isTablet
+            ? "ml-14"
+            : "ml-16"
+        } transition-all duration-300`}
+      >
         {/* Header */}
         <header className="p-5 flex justify-between items-center">
           <h1
@@ -114,9 +297,6 @@ const AccountProfilePage = () => {
           >
             TAKARAKUJI
           </h1>
-          <div className="relative">
-            <BurgerMenu />
-          </div>
         </header>
 
         {/* Main content */}
