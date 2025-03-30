@@ -11,26 +11,47 @@ const LandingPage = () => {
     const [minutes, setMinutes] = useState(0);
     const [seconds, setSeconds] = useState(0);
 
-    // Fetch last winning numbers
-    useEffect(() => {
-        const fetchDrawData = async () => {
-            try {
-                const response = await fetchLastWinningNumber();
-                if (response?.lastDraw?.winning_number) {
-                    const numbers = response.lastDraw.winning_number.split('-').map(Number);
-                    setLastDrawNumbers(numbers);
-                }
-            } catch (err) {
-                console.error("Failed to fetch last draw:", err);
-            } finally {
-                setIsLoading(false);
+   const handleGenerateNewDraw = async () => {
+       try {
+         const response = await generateNewDraw();
+         if (response.success) {
+           console.log("New draw generated:", response);
+           handleFetchLastWinningNumber();
+         } else {
+           setError(response.message || "Failed to generate a new draw.");
+         }
+       } catch (error) {
+         console.error("Error generating new draw:", error);
+         setError(
+           error.response?.data?.message ||
+             "An error occurred while generating a new draw."
+         );
+       }
+     };
+   
+    const handleFetchLastWinningNumber = async () => {
+        try {
+            const response = await fetchLastWinningNumber();
+            if (response && response.winning_number) {
+            const lastWinningNumber = response.winning_number.split("-").map(Number);
+            console.log("Setting lastDrawNumbers to:", lastWinningNumber); // Log here
+            setLastDrawNumbers(lastWinningNumber);
             }
+        } catch (err) {
+            console.error("Error fetching last draw:", err);
+        }
         };
 
-        fetchDrawData();
-    }, []);
+        useEffect(() => {
+        handleFetchLastWinningNumber();
+        }, []);
 
-    // Countdown animation effect
+    useEffect(() => {
+        console.log("Updated lastDrawNumbers:", lastDrawNumbers);
+        }, [lastDrawNumbers]);
+   
+
+    
     useEffect(() => {
         const newMinutes = Math.floor(countdown / 60);
         const newSeconds = countdown % 60;
@@ -41,8 +62,9 @@ const LandingPage = () => {
             setAnimate(true);
             const timer = setTimeout(() => {
                 setAnimate(false);
-                // Generate new draw when countdown reaches 0
+              
                 handleGenerateNewDraw();
+               
             }, 3000);
             return () => clearTimeout(timer);
         } else {
@@ -50,21 +72,7 @@ const LandingPage = () => {
         }
     }, [countdown]);
 
-    const handleGenerateNewDraw = async () => {
-        try {
-            const response = await generateNewDraw();
-            if (response?.success) {
-                // Refresh the last winning numbers after new draw
-                const fetchResponse = await fetchLastWinningNumber();
-                if (fetchResponse?.lastDraw?.winning_number) {
-                    const numbers = fetchResponse.lastDraw.winning_number.split('-').map(Number);
-                    setLastDrawNumbers(numbers);
-                }
-            }
-        } catch (error) {
-            console.error("Error generating new draw:", error);
-        }
-    };
+    
 
     const formatTime = (time) => {
         return time < 10 ? `0${time}` : time;
