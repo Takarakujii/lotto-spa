@@ -119,9 +119,9 @@ const DrawPage = () => {
     if (text === "Top Up") {
       navigate("/profile");
     } else if (text === "History") {
-      navigate("/draw-history");
+      navigate("/history");
     } else if (text === "Logout") {
-      navigate("/login");
+      navigate("/signin");
     }
   };
 
@@ -220,6 +220,29 @@ const DrawPage = () => {
       <div className="absolute w-48 h-48 rounded-full bg-purple-600 blur-3xl opacity-20 bottom-40 right-20"></div>
       <div className="absolute w-36 h-36 rounded-full bg-blue-400 blur-3xl opacity-10 bottom-20 left-40"></div>
       <div className="absolute w-44 h-44 rounded-full bg-fuchsia-600 blur-3xl opacity-15 top-40 right-40"></div>
+
+      {/* Floating neon orbs */}
+      <div className="absolute inset-0 overflow-hidden">
+        {[1, 2, 3, 4, 5].map((_, index) => (
+          <div
+            key={index}
+            className="absolute rounded-full blur-lg"
+            style={{
+              width: `${Math.random() * 100 + 50}px`,
+              height: `${Math.random() * 100 + 50}px`,
+              background:
+                index % 2 === 0
+                  ? "rgba(255, 0, 255, 0.2)"
+                  : "rgba(0, 255, 255, 0.2)",
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animation: `float ${
+                Math.random() * 10 + 10
+              }s infinite ease-in-out`,
+            }}
+          />
+        ))}
+      </div>
 
       {/* Navbar component */}
       <Navbar />

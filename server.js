@@ -6,8 +6,9 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { Server } from 'socket.io';
 import { io as client_io } from 'socket.io-client';
-import { fetchPotAmount } from './src/service/FetchPot.js';
+import axios from 'axios';
 
+const API_BASE_URL = 'http://localhost:8080/v1';
 const PRIMARY = 3000;
 const isPRIMARY = process.env.PORT == PRIMARY;
 const IS_PRODUCTION = process.env.ENV === 'production';
@@ -18,62 +19,79 @@ const countdownState = {
   interval: null,
   io: null,
   slaves: new Set(),
-  latestPot: null,  
+  latestPot: null,
+};
+
+async function fetchPotAmount() {
+    try {
+        const response = await axios.get(`${API_BASE_URL}/pot`, {
+            headers: { apikey: "hotdog" },
+            withCredentials: true
+        });
+
+        if (!response.data?.success) throw new Error("Failed to fetch pot amount");
+        return response.data.potAmount || 0;
+    } catch (error) {
+        console.error("❌ Error fetching pott:", error);
+        return 0;
+    }
+}
+
+
+
+const startCountdown = () => {
+    if (countdownState.interval || !isPRIMARY) return;
+
+    countdownState.interval = setInterval(async () => {
+        if (countdownState.countdown > 0) {
+            countdownState.countdown--;
+        } else {
+            clearInterval(countdownState.interval);
+            countdownState.interval = null;
+
+            
+            countdownState.countdown = 60;
+            startCountdown();
+        }
+
+        const potAmount = await fetchPotAmount();
+        countdownState.latestPot = { amount: potAmount };
+        countdownState.io.emit("Pot", { amount: potAmount });
+
+        countdownState.io.emit("countdownUpdate", countdownState.countdown);
+        countdownState.slaves.forEach(slave => slave.emit("countdownUpdate", countdownState.countdown));
+
+    }, 1000);
 };
 
 async function createCustomServer() {
   const app = express();
   const server = createServer(app);
   const io = new Server(server, {
-    cors: {
-      origin: '*',
-      methods: ['GET', 'POST']
-    },
+    cors: { origin: '*', methods: ['GET', 'POST'] }
   });
 
-  if (!countdownState.io) {
-    countdownState.io = io;
-  }
+  if (!countdownState.io) countdownState.io = io;
 
   let primarySocket;
   if (!isPRIMARY) {
     primarySocket = client_io(`http://localhost:${PRIMARY}`);
 
     primarySocket.on("countdownUpdate", (countdown) => {
-        countdownState.countdown = countdown;
-        countdownState.io.emit("countdownUpdate", countdown);
+      countdownState.countdown = countdown;
+      countdownState.io.emit("countdownUpdate", countdown);
     });
 
     primarySocket.on("Pot", (potData) => {
-        console.log("✅ Slave received Pot:", potData);
-        countdownState.latestPot = potData;  
-
-        countdownState.io.emit("Pot", potData);
+      countdownState.latestPot = potData;
+      countdownState.io.emit("Pot", potData);
+      // console.log("slave recieve data from primary hhahahahaha", potData);
     });
 
-    // ✅ Request sa latest Pot on connection
     primarySocket.emit("requestPot");
-
     console.log(`✅ Slave connected to Primary at ${PRIMARY}`);
+  }
 
-    // ✅ Handle Disconnection na irereset  ang countdown and pot to 0
-    primarySocket.on("disconnect", () => {
-        console.log("❌ Lost connection to Primary Server! Resetting countdown and pot.");
-        
-        countdownState.countdown = 0;
-        countdownState.latestPot = { amount: 0 };
-
-        // Notify all connected clients of reset
-        countdownState.io.emit("countdownUpdate", 0);
-        countdownState.io.emit("Pot", { amount: 0 });
-    });
-
-    // ✅ Handle Reconnection: Request the latest pot again
-    primarySocket.on("connect", () => {
-        console.log("✅ Reconnected to Primary Server, requesting latest pot...");
-        primarySocket.emit("requestPot");
-    });
-}
   let vite;
   if (IS_PRODUCTION) {
     app.use(express.static(path.resolve(__dirname, './dist/client/'), { index: false }));
@@ -81,12 +99,8 @@ async function createCustomServer() {
     vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'custom',
-      build: {
-        ssr: true,
-        ssrEmitAssets: true,
-      }
+      build: { ssr: true, ssrEmitAssets: true }
     });
-
     app.use(vite.middlewares);
   }
 
@@ -117,45 +131,6 @@ async function createCustomServer() {
     }
   });
 
-  const startCountdown = () => {
-    if (countdownState.interval || !isPRIMARY) return;
-
-    countdownState.interval = setInterval(async () => {
-      if (countdownState.countdown > 0) {
-        countdownState.countdown--;
-      } else {
-        clearInterval(countdownState.interval);
-        countdownState.interval = null;
-
-        if (!countdownState.interval) {
-          countdownState.countdown = 60;
-          startCountdown();
-        }
-      }
-
-      const result = await fetchPotAmount();
-
-      if (result && result.data?.potAmount !== undefined) {
-        const potAmount = result.data.potAmount;
-        countdownState.latestPot = { amount: potAmount }; 
-
-        // ✅ Send `Pot` update to all clients & slaves
-        countdownState.io.emit("Pot", { amount: potAmount });
-
-        countdownState.slaves.forEach(slave => {
-          slave.emit("Pot", { amount: potAmount });
-        });
-
-        console.log("✅ Primary broadcasting Pot:", potAmount);
-      } else {
-        console.error("❌ Invalid response from fetchPotAmount:", result);
-      }
-
-      countdownState.io.emit("countdownUpdate", countdownState.countdown);
-      countdownState.slaves.forEach(slave => slave.emit("countdownUpdate", countdownState.countdown));
-    }, 1000);
-  };
-
   io.on('connection', (socket) => {
     console.log(`User connected: ${socket.id} on port ${process.env.PORT}`);
 
@@ -163,20 +138,15 @@ async function createCustomServer() {
       countdownState.slaves.add(socket);
       socket.emit('countdownUpdate', countdownState.countdown);
 
-      // ✅ Send latest `Pot` to new connections
       socket.on("requestPot", async () => {
         if (countdownState.latestPot) {
           socket.emit("Pot", countdownState.latestPot);
-          console.log(`✅ Sent latest Pot to ${socket.id}:`, countdownState.latestPot);
+          // console.log("reqesting pot", countdownState.latestPot);
         }
       });
     } else {
       socket.emit("countdownUpdate", countdownState.countdown);
-
-      if (countdownState.latestPot) {
-        socket.emit("Pot", countdownState.latestPot);
-        console.log(`✅ Slave sending Pot to ${socket.id}:`, countdownState.latestPot);
-      }
+      if (countdownState.latestPot) socket.emit("Pot", countdownState.latestPot);
     }
 
     socket.on('disconnect', () => {

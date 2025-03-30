@@ -11,9 +11,10 @@ export function SocketProvider({ children }) {
   useEffect(() => {
     if (!socket) return;
 
-
-    socket.on('countdownUpdate', (newCountdown) => {setCountdown(newCountdown);});
-    socket.on('Pot', (newPot) => {setPot(newPot);});
+    socket.on('countdownUpdate', (newCountdown) => setCountdown(newCountdown));
+    socket.on('Pot', (data) => {
+      if (data?.amount) setPot(data.amount);
+    });
 
     return () => {
       socket.off('countdownUpdate');
@@ -22,7 +23,7 @@ export function SocketProvider({ children }) {
   }, [socket]);
 
   return (
-    <SocketContext.Provider value={{countdown, pot}}>
+    <SocketContext.Provider value={{ countdown, pot }}>
       {children}
     </SocketContext.Provider>
   );

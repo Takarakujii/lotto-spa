@@ -29,7 +29,7 @@ const Navbar = () => {
     {
       icon: <Clock />,
       label: "HISTORY",
-      path: "/draw-history",
+      path: "/history",
       hoverColor: "text-yellow-400 hover:text-yellow-200",
     },
     {
@@ -50,13 +50,13 @@ const Navbar = () => {
     {
       icon: <LogOut />,
       label: "LOGOUT",
-      path: "/login",
+      path: "/signin",
       hoverColor: "text-red-400 hover:text-red-200",
     },
   ];
 
   const handleNavigation = (path) => {
-    if (path === "/login") {
+    if (path === "/signin") {
       localStorage.removeItem("token");
     }
     navigate(path);
