@@ -11,17 +11,21 @@ const LandingPage = () => {
     const [minutes, setMinutes] = useState(0);
     const [seconds, setSeconds] = useState(0);
 
-    // Fetch last winning numbers
     useEffect(() => {
         const fetchDrawData = async () => {
             try {
                 const response = await fetchLastWinningNumber();
-                if (response?.lastDraw?.winning_number) {
-                    const numbers = response.lastDraw.winning_number.split('-').map(Number);
+                console.log("Response from fetchLastWinningNumber:", response);
+                
+                if (response?.success && response?.winning_number) {
+                    const numbers = response.winning_number.split('-').map(Number);
                     setLastDrawNumbers(numbers);
+                    console.log("Last Draw Numbers:", numbers); 
+                } else {
+                    console.error("No last draw data available.");
                 }
             } catch (err) {
-                console.error("Failed to fetch last draw:", err);
+                console.error("Failed to fetch last draw:", err); 
             } finally {
                 setIsLoading(false);
             }
