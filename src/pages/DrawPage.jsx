@@ -4,6 +4,8 @@ import { useNavigate } from "react-router";
 import useAccountForm from "../service/FetchAccount";
 import { useCountdown } from "../service/CountdownContext";
 import { placeBet } from "../service/BetService";
+import WinningNotification from '../components/DisplayWinningNotification';
+
 import {
   generateNewDraw,
   fetchLastWinningNumber,
@@ -26,6 +28,10 @@ const DrawPage = () => {
   const [potMoney, setPotMoney] = useState(0);
   const windowSize = useWindowSize();
   const [isNavExpanded, setIsNavExpanded] = useState(false);
+  const [showWinPopup, setShowWinPopup] = useState(false);
+
+  const [winStatus, setWinStatus] = useState(null); // Track win status
+  console.log("winner", winStatus);
 
   // Device detection with specific laptop breakpoints
   const isMobile = windowSize.width <= 768;
@@ -131,6 +137,9 @@ const DrawPage = () => {
           .split("-")
           .map(Number);
         setLastDrawNumbers(lastWinningNumber);
+        
+        
+        checkWin(lastWinningNumber);
       } else {
         console.error("Unexpected API response structure:", response);
       }
@@ -237,6 +246,30 @@ const DrawPage = () => {
   const formatLargeNumber = (num) => {
     return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   };
+
+
+  const checkWin = (winningNumbers) => {
+    if (selectedNumbers.every(num => num !== null)) {
+      const isWin = selectedNumbers.every(num => winningNumbers.includes(num));
+      if (isWin) {
+        setWinStatus({
+          isWinner: true,
+          message: "Congratulations! You've won the jackpot!",
+        });
+        setShowWinPopup(true); // Show the winning popup
+      } else {
+        setWinStatus({
+          isWinner: false,
+          message: "Sorry, you didn't win this time. Try again!",
+        });
+      }
+    }
+  };
+
+ 
+  useEffect(() => {
+    setWinStatus(null);
+  }, [selectedNumbers]);
 
   return (
     <div
@@ -739,6 +772,12 @@ const DrawPage = () => {
           </div>
         </div>
       )}
+
+{showWinPopup && (
+  <WinningNotification 
+    onClose={() => setShowWinPopup(false)}
+  />
+)}
     </div>
   );
 };

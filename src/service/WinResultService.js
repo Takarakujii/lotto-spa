@@ -7,15 +7,12 @@ export const fetchWinResult = async () => {
     try {
         const response = await axios.get(`${API_BASE_URL}/win-result/history`, {
             headers: {
-                apikey: "hotdog"
+                apikey: "hotdog",
+                "Content-Type": "application/json",
+                token: localStorage.getItem('token')
             },
             withCredentials: true
         });
-
-        if (!response.data?.success){
-            console.log("haha", response.data);
-            throw new Error(response.data?.message);
-        }
         return response.data;
     } catch (error) {
         console.error("Error fetching win result:", error);

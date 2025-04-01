@@ -1,12 +1,79 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { PartyPopper, Award, X } from 'lucide-react';
+import { fetchWinResult } from '../service/WinResultService';
 
-const WinningNotification = ({
-    username = "CyberPlayer88",
-    winAmount = "₱10,000.00",
-    winningNumbers = [12, 9, 43, 19, 22, 6],
-    onClose
-}) => {
+const WinningNotification = ({ onClose }) => {
+    const [username, setUsername] = useState("CyberPlayer88");
+    const [winAmount, setWinAmount] = useState("₱10,000.00");
+    const [winningNumbers, setWinningNumbers] = useState([12, 9, 43, 19, 22, 6]);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchResult = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetchWinResult();
+                console.log('Full API response:', response);
+
+                if (response && response.winningHistory && response.winningHistory.length > 0) {
+                    // Get the most recent win (first item in array)
+                    const latestWin = response.winningHistory[0];
+                    console.log('Latest win data:', latestWin);
+                    
+                    // Update state with the fetched data
+                    setUsername(latestWin.username || "CyberPlayer88");
+                    
+                    // Format prize amount with currency (assuming winning_prize is a number)
+                    const formattedAmount = latestWin.winning_prize 
+                        ? `₱${latestWin.winning_prize.toLocaleString()}.00` 
+                        : "₱10,000.00";
+                    setWinAmount(formattedAmount);
+                    
+                    // Convert winning_number string to array of numbers
+                    const numbersArray = latestWin.winning_number 
+                        ? latestWin.winning_number.split('-').map(num => parseInt(num, 10))
+                        : [12, 9, 43, 19, 22, 6];
+                    setWinningNumbers(numbersArray);
+                } else {
+                    console.warn('No winning history found in response');
+                    // Keep the default values if no data is available
+                }
+            } catch (error) {
+                console.error('Error fetching win result:', error);
+                setError(error.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        
+        fetchResult();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+                <div className="text-white">Loading your winning details...</div>
+            </div>
+        );
+    }
+
+    if (error) {
+        return (
+            <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50">
+                <div className="text-white bg-red-500 p-4 rounded max-w-md text-center">
+                    <p>Error: {error}</p>
+                    <button 
+                        onClick={onClose} 
+                        className="mt-3 px-4 py-2 bg-white text-red-500 rounded hover:bg-gray-100"
+                    >
+                        Close
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 backdrop-blur-sm">
             <div
@@ -86,6 +153,7 @@ const WinningNotification = ({
                     </div>
 
                     <button
+                    onClick={onClose} 
                         className="py-3 px-8 w-full bg-transparent border-2 border-cyan-500 rounded-md text-cyan-400 font-bold tracking-wide hover:bg-cyan-900 hover:bg-opacity-30 transition-all transform hover:scale-105"
                         style={{
                             textShadow: "0 0 5px rgba(34, 211, 238, 0.5)",
@@ -93,7 +161,9 @@ const WinningNotification = ({
                         }}
                     >
                         CLAIM NOW
+                        
                     </button>
+                    
 
                     <div className="mt-6 text-sm text-gray-400">
                         Funds will be added to your account within 24 hours
