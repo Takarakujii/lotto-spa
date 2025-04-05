@@ -42,7 +42,15 @@ async function fetchPot() {
 async function fetchLastDraw(token) {
   try {
   
-    const response = await fetchLastWinningNumber(token);
+    const response = await axios.get(`${API_BASE_URL}/draw/last`, {
+      headers: {
+        apikey: "hotdog",
+        "Content-Type": "application/json",
+        token: `${token}`,
+      },
+      withCredentials: true
+    });
+    
     // console.log("📄 Last draw API resxponse:", response.data);
     // console.log("winning", response.data.winning_number )
     if (!response.data?.success) {

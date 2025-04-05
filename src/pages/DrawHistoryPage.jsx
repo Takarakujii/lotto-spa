@@ -1,47 +1,68 @@
-import React, { useState } from "react";
-import { Hash, Trophy, Calendar } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Hash, Trophy, Calendar, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Navbar from "../components/Navbar";
+import { fetchWinners } from "../service/FetchWinners";
 
 const DrawHistoryPage = () => {
   const [navExpanded, setNavExpanded] = useState(false);
+  const [drawHistory, setDrawHistory] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  // Sample draw history data
-  const drawHistory = [
-    {
-      id: 1,
-      drawNumber: "D-2023-001",
-      date: "2023-10-01",
-      numbers: [7, 14, 21, 28, 35, 42],
-      jackpot: "₱10,000,000",
-      winners: 2,
-    },
-    {
-      id: 2,
-      drawNumber: "D-2023-002",
-      date: "2023-09-28",
-      numbers: [3, 9, 18, 27, 36, 45],
-      jackpot: "₱8,500,000",
-      winners: 1,
-    },
-    {
-      id: 3,
-      drawNumber: "D-2023-003",
-      date: "2023-09-25",
-      numbers: [5, 10, 15, 20, 25, 30],
-      jackpot: "₱7,250,000",
-      winners: 3,
-    },
-    {
-      id: 4,
-      drawNumber: "D-2023-004",
-      date: "2023-09-22",
-      numbers: [2, 4, 8, 16, 32, 64],
-      jackpot: "₱5,100,000",
-      winners: 0,
-    },
-  ];
+  // Fetch winners data on component mount
+  useEffect(() => {
+    const getWinnersData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetchWinners();
+        console.log("Winners data:", response);
+        
+        if (response.success && response.winners) {
+          const formattedData = response.winners.map(winner => ({
+            id: winner.id || Math.random().toString(36).substr(2, 9),
+            drawNumber: winner.draw_number || `Draw-${winner.id}`,
+            date: winner.draw_date || new Date().toISOString().split('T')[0],
+            numbers: winner.winning_number ? winner.winning_number.split('-').map(Number) : [0, 0, 0, 0, 0, 0],
+            jackpot: `₱${winner.winning_prize ? winner.winning_prize.toLocaleString() : '0'}`,
+            username: winner.username || "Anonymous"
+          }));
+          
+          setDrawHistory(formattedData);
+        } else {
+          setDrawHistory([
+            {
+              id: 1,
+              drawNumber: "D-2023-001",
+              date: "2023-10-01",
+              numbers: [7, 14, 21, 28, 35, 42],
+              jackpot: "₱10,000,000",
+              username: "CyberPlayer88"
+            }
+          ]);
+        }
+      } catch (err) {
+        console.error("Error fetching winners:", err);
+        setError("Failed to load winners data");
+        // Set fallback data in case of error
+        setDrawHistory([
+          {
+            id: 1,
+            drawNumber: "D-2023-001",
+            date: "2023-10-01",
+            numbers: [7, 14, 21, 28, 35, 42],
+            jackpot: "₱10,000,000",
+            username: "CyberPlayer88"
+          }
+        ]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    getWinnersData();
+  }, []);
 
   return (
     <div
@@ -132,97 +153,94 @@ const DrawHistoryPage = () => {
               Draw History
             </h2>
 
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="flex justify-center items-center py-12">
+                <div className="w-16 h-16 border-4 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+              </div>
+            )}
+
+            {/* Error message */}
+            {error && (
+              <div className="text-red-400 text-center py-8">
+                {error}
+              </div>
+            )}
+
             {/* Draw history table */}
-            <div className="space-y-6">
-              {drawHistory.map((draw) => (
-                <div
-                  key={draw.id}
-                  className="p-6 rounded-lg"
-                  style={{
-                    background: "rgba(30, 30, 50, 0.7)",
-                    border: "1px solid rgba(0, 255, 255, 0.5)",
-                    boxShadow:
-                      "0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 5px rgba(0, 255, 255, 0.2)",
-                  }}
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div>
-                      <p className="text-lg text-cyan-400 mb-1">Draw Number</p>
-                      <p className="text-xl font-medium text-white">
-                        {draw.drawNumber}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-lg text-cyan-400 mb-1">Draw Date</p>
-                      <p className="text-xl font-medium text-white">
-                        {draw.date}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-lg text-cyan-400 mb-1">Winners</p>
-                      <p className="text-xl font-medium text-white">
-                        {draw.winners > 0 ? (
-                          <span className="text-green-400">{draw.winners}</span>
-                        ) : (
-                          <span className="text-red-400">No winners</span>
-                        )}
-                      </p>
-                    </div>
+            {!isLoading && !error && (
+              <div className="space-y-6">
+                {drawHistory.length === 0 ? (
+                  <div className="text-cyan-400 text-center py-8">
+                    No draw history available
                   </div>
-
-                  <div className="mb-6">
-                    <p className="text-lg text-cyan-400 mb-2">
-                      Winning Numbers
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                      {draw.numbers.map((number, index) => (
-                        <div
-                          key={index}
-                          className="w-12 h-12 rounded-full flex items-center justify-center"
-                          style={{
-                            background: "rgba(255, 0, 255, 0.3)",
-                            border: "1px solid rgba(255, 0, 255, 0.7)",
-                            boxShadow: "0 0 8px rgba(255, 0, 255, 0.5)",
-                            color: "#ffffff",
-                            textShadow: "0 0 5px #ffffff",
-                          }}
-                        >
-                          <Hash size={16} className="mr-1" />
-                          {number}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-lg text-cyan-400 mb-1">
-                        Jackpot Prize
-                      </p>
-                      <p className="text-2xl font-bold text-yellow-400 flex items-center">
-                        <Trophy size={24} className="mr-2" />
-                        {draw.jackpot}
-                      </p>
-                    </div>
-
-                    <button
-                      className="px-6 py-2 rounded-md font-medium transition-all"
+                ) : (
+                  drawHistory.map((draw) => (
+                    <div
+                      key={draw.id}
+                      className="p-6 rounded-lg"
                       style={{
-                        background: "rgba(0, 255, 255, 0.1)",
+                        background: "rgba(30, 30, 50, 0.7)",
                         border: "1px solid rgba(0, 255, 255, 0.5)",
-                        color: "#00ffff",
-                        boxShadow: "0 0 8px rgba(0, 255, 255, 0.3)",
+                        boxShadow:
+                          "0 0 10px rgba(0, 255, 255, 0.3), inset 0 0 5px rgba(0, 255, 255, 0.2)",
                       }}
-                      onClick={() => navigate(`/draw-details/${draw.id}`)}
                     >
-                      View Details
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                        <div>
+                          <p className="text-lg text-cyan-400 mb-1">Draw Date</p>
+                          <p className="text-xl font-medium text-white">
+                            {draw.date}
+                          </p>
+                        </div>
+
+                        <div>
+                          <p className="text-lg text-cyan-400 mb-1">Username</p>
+                          <p className="text-xl font-medium text-white flex items-center">
+                            <User size={18} className="mr-2 text-blue-400" />
+                            <span className="text-blue-300">{draw.username}</span>
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mb-6">
+                        <p className="text-lg text-cyan-400 mb-2">
+                          Winning Numbers
+                        </p>
+                        <div className="flex flex-wrap gap-3">
+                          {draw.numbers.map((number, index) => (
+                            <div
+                              key={index}
+                              className="w-12 h-12 rounded-full flex items-center justify-center"
+                              style={{
+                                background: "rgba(255, 0, 255, 0.3)",
+                                border: "1px solid rgba(255, 0, 255, 0.7)",
+                                boxShadow: "0 0 8px rgba(255, 0, 255, 0.5)",
+                                color: "#ffffff",
+                                textShadow: "0 0 5px #ffffff",
+                              }}
+                            >
+                              <Hash size={16} className="mr-1" />
+                              {number}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-lg text-cyan-400 mb-1">
+                          Jackpot Prize
+                        </p>
+                        <p className="text-2xl font-bold text-yellow-400 flex items-center">
+                          <Trophy size={24} className="mr-2" />
+                          {draw.jackpot}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>

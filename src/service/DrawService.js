@@ -24,13 +24,13 @@ export const generateNewDraw = async () => {
   }
 };
 
-export const fetchLastWinningNumber = async () => {
+export const fetchLastWinningNumber = async (token) => {
   try {
     const response = await axios.get(`${API_BASE_URL}/draw/last`, {
       headers: {
         apikey: "hotdog",
         "Content-Type": "application/json",
-        token: localStorage.getItem('token')
+        token:  `${token}`,
       },
       withCredentials: true
     });
