@@ -6,7 +6,10 @@ import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import { Server } from 'socket.io';
 import { io as client_io } from 'socket.io-client';
+import { fetchPotAmount } from './src/service/FetchPot.js';
+import { placeBet } from './src/service/BetService.js'
 import axios from 'axios';
+import { fetchLastWinningNumber } from './src/service/DrawService.js';
 
 const API_BASE_URL = 'http://localhost:8080/v1';
 const PRIMARY = 3000;
@@ -20,56 +23,79 @@ const countdownState = {
   io: null,
   slaves: new Set(),
   latestPot: null,
+  lastDraw: null,
 };
 
-async function fetchPotAmount() {
-    try {
-        const response = await axios.get(`${API_BASE_URL}/pot`, {
-            headers: { apikey: "hotdog" },
-            withCredentials: true
-        });
-
-        if (!response.data?.success) throw new Error("Failed to fetch pot amount");
-        return response.data.potAmount || 0;
-    } catch (error) {
-        console.error("❌ Error fetching pott:", error);
-        return 0;
-    }
+// Fetch latest pot amount
+async function fetchPot() {
+  try {
+    const response = await fetchPotAmount();
+    if (!response.data?.success) throw new Error("Failed to fetch pot amount");
+    return response.data.potAmount || 0;
+  } catch (error) {
+    console.error("❌ Error fetching pot:", error);
+    return 0;
+  }
 }
 
 
+async function fetchLastDraw(token) {
+  try {
+  
+    const response = await fetchLastWinningNumber(token);
+    // console.log("📄 Last draw API resxponse:", response.data);
+    // console.log("winning", response.data.winning_number )
+    if (!response.data?.success) {
+      throw new Error("Failed to fetch draw");
+    }
+    
+    return response.data.winning_number;
+  } catch (error) {
+    // console.error("❌ Error fetching draw:", error);
+    return null;
+  }
+}
 
+// Countdown function
 const startCountdown = () => {
-    if (countdownState.interval || !isPRIMARY) return;
+  if (countdownState.interval || !isPRIMARY) return;
 
-    countdownState.interval = setInterval(async () => {
-        if (countdownState.countdown > 0) {
-            countdownState.countdown--;
-        } else {
-            clearInterval(countdownState.interval);
-            countdownState.interval = null;
+  countdownState.interval = setInterval(async () => {
+    if (countdownState.countdown > 0) {
+      countdownState.countdown--;
+    } else {
+      clearInterval(countdownState.interval);
+      countdownState.interval = null;
+      countdownState.countdown = 60;
 
-            
-            countdownState.countdown = 60;
-            startCountdown();
-        }
+      startCountdown();
+    }
 
-        const potAmount = await fetchPotAmount();
-        countdownState.latestPot = { amount: potAmount };
-        countdownState.io.emit("Pot", { amount: potAmount });
+    // Fetch latest pot amount and update clients
+    const potAmount = await fetchPot();
+    countdownState.latestPot = { amount: potAmount };
+    countdownState.io.emit("Pot", { amount: potAmount });
 
-        countdownState.io.emit("countdownUpdate", countdownState.countdown);
-        countdownState.slaves.forEach(slave => slave.emit("countdownUpdate", countdownState.countdown));
+    const winning_number = await fetchLastDraw(null);
+    countdownState.lastDraw = {winning_num: winning_number };
+    countdownState.io.emit("Lastdraw", { winning_num: winning_number});
 
-    }, 1000);
+    countdownState.io.emit("countdownUpdate", countdownState.countdown);
+    countdownState.slaves.forEach(slave => slave.emit("countdownUpdate", countdownState.countdown));
+
+  }, 1000);
 };
 
+
+
+
+
+
+// Server setup
 async function createCustomServer() {
   const app = express();
   const server = createServer(app);
-  const io = new Server(server, {
-    cors: { origin: '*', methods: ['GET', 'POST'] }
-  });
+  const io = new Server(server, { cors: { origin: '*', methods: ['GET', 'POST'] } });
 
   if (!countdownState.io) countdownState.io = io;
 
@@ -85,10 +111,32 @@ async function createCustomServer() {
     primarySocket.on("Pot", (potData) => {
       countdownState.latestPot = potData;
       countdownState.io.emit("Pot", potData);
-      // console.log("slave recieve data from primary hhahahahaha", potData);
     });
 
     primarySocket.emit("requestPot");
+
+    primarySocket.on("Lastdraw", (drawData) => {
+      countdownState.lastDraw = drawData;
+      countdownState.io.emit("Lastdraw", drawData);
+    })
+
+
+    primarySocket.emit("requestdraw");
+
+    io.on('connection', (socket) => {
+      socket.on("requestBet", async (data) => {
+        const { betNumber, token } = data;
+        primarySocket.emit("requestBet", {betNumber, token});
+      });
+      
+      socket.on("requestdraw", async (data) => {
+        // console.log("Slave receive requestdraw with data:", data);
+        // Forward token from client to primary
+        primarySocket.emit("requestdraw", data);
+      });
+    });
+
+
     console.log(`✅ Slave connected to Primary at ${PRIMARY}`);
   }
 
@@ -131,8 +179,9 @@ async function createCustomServer() {
     }
   });
 
+  // Handle WebSocket connections
   io.on('connection', (socket) => {
-    console.log(`User connected: ${socket.id} on port ${process.env.PORT}`);
+    console.log(`🔗 User connected: ${socket.id} on port ${process.env.PORT}`);
 
     if (isPRIMARY) {
       countdownState.slaves.add(socket);
@@ -141,17 +190,46 @@ async function createCustomServer() {
       socket.on("requestPot", async () => {
         if (countdownState.latestPot) {
           socket.emit("Pot", countdownState.latestPot);
-          // console.log("reqesting pot", countdownState.latestPot);
         }
+      });
+
+      socket.on("requestdraw", async (data) => {
+        // console.log("Received requestdraw with data:", data);
+        try {
+          // If we already have last draw data,then send that s
+          if (countdownState.lastDraw) {
+            socket.emit("Lastdraw", countdownState.lastDraw);
+          }
+          if (data && data.token) {
+            // console.log("Fetching last draw with provided token");
+            const winningNumber = await fetchLastDraw(data.token);
+            if (winningNumber) {
+              countdownState.lastDraw = { winning_num: winningNumber };
+              // Send updated data back to the clieeentttttttttttt
+              socket.emit("Lastdraw", countdownState.lastDraw);
+            }
+          }
+        } catch (err) {
+          console.error("Error handling requestdraw:", err);
+        }
+      });
+
+      socket.on("requestBet", async (data) => {
+        const {betNumber, token} = data;
+        const response = await placeBet(betNumber, token);
+
+        console.log(response, "laknsdlkansdkl")
+        // console.log(betNumber, token, "aksndkajsdkja")
       });
     } else {
       socket.emit("countdownUpdate", countdownState.countdown);
       if (countdownState.latestPot) socket.emit("Pot", countdownState.latestPot);
+      if (countdownState.lastDraw) socket.emit("Lastdraw", countdownState.lastDraw);
     }
 
     socket.on('disconnect', () => {
       countdownState.slaves.delete(socket);
-      console.log(`User disconnected: ${socket.id}`);
+      console.log(`❌ User disconnected: ${socket.id}`);
     });
   });
 
@@ -164,7 +242,3 @@ async function createCustomServer() {
 }
 
 createCustomServer();
-console.log('✅ Server initialization started');
-console.log('✅ Environment:', process.env.ENV);
-console.log('✅ Current directory:', __dirname);
-console.log('✅ IS_PRODUCTION:', IS_PRODUCTION);

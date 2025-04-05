@@ -3,35 +3,27 @@ import { X } from "lucide-react";
 import { useNavigate } from "react-router";
 import useAccountForm from "../service/FetchAccount";
 import { useCountdown } from "../service/CountdownContext";
-import { placeBet } from "../service/BetService";
 import WinningNotification from '../components/DisplayWinningNotification';
-
-import {
-  generateNewDraw,
-  fetchLastWinningNumber,
-} from "../service/DrawService";
+import { generateNewDraw } from "../service/DrawService";
 import Navbar from "../components/Navbar";
-import useSocket from "../hooks/useSocket";
 import { useWindowSize } from "../hooks/useWindowSize";
 
 const DrawPage = () => {
-  const { socket, isConnected } = useSocket();
   const [selectedNumbers, setSelectedNumbers] = useState(Array(6).fill(null));
   const [activeModalIndex, setActiveModalIndex] = useState(null);
-  const { countdown, pot } = useCountdown();
+  const { countdown, pot, placeBet, lastdraw, requestLastDraw} = useCountdown();
   const [seconds, setSeconds] = useState(0);
   const [minutes, setMinutes] = useState(1);
   const [animate, setAnimate] = useState(false);
   const [error, setError] = useState(null);
   const [insufficientFunds, setInsufficientFunds] = useState(false);
   const [lastDrawNumbers, setLastDrawNumbers] = useState([0, 0, 0, 0, 0, 0]);
-  const [potMoney, setPotMoney] = useState(0);
   const windowSize = useWindowSize();
   const [isNavExpanded, setIsNavExpanded] = useState(false);
   const [showWinPopup, setShowWinPopup] = useState(false);
 
   const [winStatus, setWinStatus] = useState(null); // Track win status
-  console.log("winner", winStatus);
+  
 
   // Device detection with specific laptop breakpoints
   const isMobile = windowSize.width <= 768;
@@ -63,32 +55,32 @@ const DrawPage = () => {
   const { balance, handleAccountForm } = useAccountForm();
   const navigate = useNavigate();
 
-  // Socket connection and event listeners
-  useEffect(() => {
-    if (!isConnected || !socket) {
-      console.log("Waiting for socket connection...");
-      return;
-    }
+  // // Socket connection and event listeners
+  // useEffect(() => {
+  //   if (!isConnected || !socket) {
+  //     console.log("Waiting for socket connection...");
+  //     return;
+  //   }
 
-    console.log("Socket connected, setting up listeners");
+  //   console.log("Socket connected, setting up listeners");
 
-    const handlePotUpdate = (data) => {
-      console.log("Pot update received:", data);
-      if (data && data.amount) {
-        setPotMoney(data.amount);
-      }
-    };
+  //   const handlePotUpdate = (data) => {
+  //     // console.log("Pot update received:", data);
+  //     if (data && data.amount) {
+  //       setPotMoney(data.amount);
+  //     }
+  //   };
 
-    socket.on("Pot", handlePotUpdate);
+  //   socket.on("Pot", handlePotUpdate);
 
-    // Cleanup function
-    return () => {
-      if (socket) {
-        console.log("Cleaning up socket listeners");
-        socket.off("Pot", handlePotUpdate);
-      }
-    };
-  }, [isConnected, socket]);
+    
+  //   return () => {
+  //     if (socket) {
+  //       console.log("Cleaning up socket listeners");
+  //       socket.off("Pot", handlePotUpdate);
+  //     }
+  //   };
+  // }, [isConnected, socket]);
 
   useEffect(() => {
     handleAccountForm();
@@ -103,20 +95,46 @@ const DrawPage = () => {
     if (countdown === 0) {
       setAnimate(true);
       handleGenerateNewDraw();
-      setPotMoney((prevPot) => (prevPot !== pot ? pot : prevPot));
+     
 
       setTimeout(() => {
         setAnimate(false);
       }, 3000);
     }
-  }, [countdown, pot]);
+  // }, [countdown, pot]);
+  }, [countdown]);
+
+  
+  useEffect(() => {
+    // console.log("Requesting last draw data...");
+    if (requestLastDraw) {
+      requestLastDraw();
+    }
+  }, [requestLastDraw]);
+
+  // Process lastdraw data when it arrives
+  useEffect(() => {
+    if (lastdraw) {
+      try {
+        // Handle the string format (e.g., "01-02-03-04-05-06")
+        const numbers = lastdraw.split('-').map(Number);
+        console.log("Parsed numbers:", numbers);
+        if (numbers.length === 6) {
+          setLastDrawNumbers(numbers);
+          checkWin(numbers);
+        }
+      } catch (err) {
+        console.error("Error processing lastdraw:", err);
+      }
+    }
+  }, [lastdraw]);
 
   const handleGenerateNewDraw = async () => {
     try {
       const response = await generateNewDraw();
       if (response.success) {
         console.log("New draw generated:", response);
-        handleFetchLastWinningNumber();
+        requestLastDraw();
       } else {
         setError(response.message || "Failed to generate a new draw.");
       }
@@ -128,29 +146,6 @@ const DrawPage = () => {
       );
     }
   };
-
-  const handleFetchLastWinningNumber = async () => {
-    try {
-      const response = await fetchLastWinningNumber();
-      if (response && response.winning_number) {
-        const lastWinningNumber = response.winning_number
-          .split("-")
-          .map(Number);
-        setLastDrawNumbers(lastWinningNumber);
-        
-        
-        checkWin(lastWinningNumber);
-      } else {
-        console.error("Unexpected API response structure:", response);
-      }
-    } catch (err) {
-      console.error("Error fetching last draw:", err);
-    }
-  };
-
-  useEffect(() => {
-    handleFetchLastWinningNumber();
-  }, []);
 
   const formatTime = (time) => {
     return time < 10 ? `0${time}` : time;
@@ -214,30 +209,35 @@ const DrawPage = () => {
       return;
     }
 
-    const formattedBetNumber = selectedNumbers
-      .map((num) => String(num).padStart(2, "0"))
-      .join("-");
-
-    try {
-      const response = await placeBet(formattedBetNumber);
-      if (response.success) {
-        console.log(response);
-        handleAccountForm();
-      } else {
-        setError(response.message || "Bet failed. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error during bet", error);
-      setError(
-        error.response?.data?.message ||
-          "An error occurred while placing your bet."
-      );
-
-      if (error.response?.data?.message?.includes("insufficient")) {
-        setInsufficientFunds(true);
-      }
-    }
+    const formattedBetNumber = selectedNumbers.map((num) => String(num).padStart(2, "0")).join("-");
+    placeBet(formattedBetNumber); // Using WebSocket-based placeBet function
+    // console.log("📩 Sending bet:", placeBet);
   };
+
+  //   const formattedBetNumber = selectedNumbers
+  //     .map((num) => String(num).padStart(2, "0"))
+  //     .join("-");
+
+  //   try {
+  //     const response = await placeBet(formattedBetNumber);
+  //     if (response.success) {
+  //       console.log(response);
+  //       handleAccountForm();
+  //     } else {
+  //       setError(response.message || "Bet failed. Please try again.");
+  //     }
+  //   } catch (error) {
+  //     console.error("Error during bet", error);
+  //     setError(
+  //       error.response?.data?.message ||
+  //         "An error occurred while placing your bet."
+  //     );
+
+  //     if (error.response?.data?.message?.includes("insufficient")) {
+  //       setInsufficientFunds(true);
+  //     }
+  //   }
+  // };
 
   const isNumberSelected = (number) => {
     return selectedNumbers.includes(number);
@@ -351,7 +351,7 @@ const DrawPage = () => {
               textShadow: "0 0 10px #ffdd00, 0 0 15px #ffdd00",
             }}
           >
-            ₱{formatLargeNumber(potMoney || 0)}
+            ₱{formatLargeNumber(pot || 0)}
           </div>
           <p className="text-yellow-200 text-xs mt-1 sm:mt-2 italic">
             Match all 6 numbers to win the grand prize!

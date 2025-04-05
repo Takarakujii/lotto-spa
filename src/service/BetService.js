@@ -2,7 +2,7 @@ import axios from 'axios';
 
 const API_BASE_URL = "http://localhost:8080/v1";
 
-export const placeBet = async (betNumber) => {
+export const placeBet = async (betNumber, token) => {
   try {
     const response = await axios.post(`${API_BASE_URL}/bet`, {
       betAmount: "50",
@@ -11,7 +11,7 @@ export const placeBet = async (betNumber) => {
       headers: {
         apikey: "hotdog",
         "Content-Type": "application/json",
-        token: localStorage.getItem('token')
+        token: `${token}`,
       },
       withCredentials: true
     });

@@ -29,6 +29,7 @@ export const fetchLastWinningNumber = async () => {
     const response = await axios.get(`${API_BASE_URL}/draw/last`, {
       headers: {
         apikey: "hotdog",
+        "Content-Type": "application/json",
         token: localStorage.getItem('token')
       },
       withCredentials: true
