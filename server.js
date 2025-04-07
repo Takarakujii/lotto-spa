@@ -8,10 +8,9 @@ import { Server } from 'socket.io';
 import { io as client_io } from 'socket.io-client';
 import { fetchPotAmount } from './src/service/FetchPot.js';
 import { placeBet } from './src/service/BetService.js'
-import axios from 'axios';
 import { fetchLastWinningNumber } from './src/service/DrawService.js';
 
-const API_BASE_URL = 'http://localhost:8080/v1';
+const API_BASE_URL = 'http://localhost:9000/v1';
 const PRIMARY = 3000;
 const isPRIMARY = process.env.PORT == PRIMARY;
 const IS_PRODUCTION = process.env.ENV === 'production';
@@ -38,26 +37,14 @@ async function fetchPot() {
   }
 }
 
-
 async function fetchLastDraw(token) {
   try {
-  
-    const response = await axios.get(`${API_BASE_URL}/draw/last`, {
-      headers: {
-        apikey: "hotdog",
-        "Content-Type": "application/json",
-        token: `${token}`,
-      },
-      withCredentials: true
-    });
-    
-    // console.log("📄 Last draw API resxponse:", response.data);
-    // console.log("winning", response.data.winning_number )
-    if (!response.data?.success) {
+    const response = await fetchLastWinningNumber(token);
+    if (!response.success) {
       throw new Error("Failed to fetch draw");
     }
     
-    return response.data.winning_number;
+    return response.winning_number;
   } catch (error) {
     // console.error("❌ Error fetching draw:", error);
     return null;
@@ -93,11 +80,6 @@ const startCountdown = () => {
 
   }, 1000);
 };
-
-
-
-
-
 
 // Server setup
 async function createCustomServer() {
